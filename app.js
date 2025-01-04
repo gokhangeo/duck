@@ -201,14 +201,53 @@ function createColorPalette() {
 }
 
 // Araç butonlarını ayarla
-document.querySelectorAll('.tool-btn').forEach(button => {
+document.getElementById('brush-tool').addEventListener('click', () => {
+    currentTool = 'brush';
+    updateToolButtons('brush-tool');
+});
+
+document.getElementById('eraser-tool').addEventListener('click', () => {
+    currentTool = 'eraser';
+    updateToolButtons('eraser-tool');
+});
+
+document.getElementById('fill-tool').addEventListener('click', () => {
+    currentTool = 'fill';
+    updateToolButtons('fill-tool');
+});
+
+// Şekil butonları
+document.querySelectorAll('[id^="shape-"]').forEach(button => {
     button.addEventListener('click', () => {
-        document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
-        button.classList.add('active');
-        currentTool = button.id.replace('-tool', '');
-        updateBrushStyle();
+        const shapeType = button.id.replace('shape-', '');
+        currentTool = 'shape';
+        selectedShape = shapeType;
+        updateToolButtons(button.id);
     });
 });
+
+// Parti efekt butonları
+document.getElementById('party-rainbow').addEventListener('click', () => {
+    currentTool = 'rainbow';
+    updateToolButtons('party-rainbow');
+});
+
+document.getElementById('party-sparkle').addEventListener('click', () => {
+    currentTool = 'sparkle';
+    updateToolButtons('party-sparkle');
+});
+
+document.getElementById('party-confetti').addEventListener('click', () => {
+    currentTool = 'confetti';
+    updateToolButtons('party-confetti');
+});
+
+function updateToolButtons(activeId) {
+    document.querySelectorAll('.tool-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.getElementById(activeId).classList.add('active');
+}
 
 // Boyut butonlarını ayarla
 document.querySelectorAll('.size-btn').forEach(button => {
@@ -249,38 +288,66 @@ function getCoordinates(e) {
 }
 
 function startDrawing(e) {
-    e.preventDefault();
     isDrawing = true;
-    const coords = getCoordinates(e);
-    
-    if (currentTool === 'fill') {
-        const fillColor = currentColor;
-        floodFill(coords.x, coords.y, fillColor);
-    } else {
-        lastX = coords.x;
-        lastY = coords.y;
-        ctx.beginPath();
-        ctx.moveTo(coords.x, coords.y);
+    [lastX, lastY] = [e.offsetX, e.offsetY];
+
+    if (currentTool === 'shape' && selectedShape) {
+        const shape = new Shape(selectedShape, e.offsetX, e.offsetY, currentSize, currentColor);
+        shapes.push(shape);
+        redrawCanvas();
     }
 }
 
 function draw(e) {
     if (!isDrawing) return;
-    e.preventDefault();
-    
-    const coords = getCoordinates(e);
-    
-    if (currentTool === 'brush' || currentTool === 'eraser') {
-        ctx.lineTo(coords.x, coords.y);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(coords.x, coords.y);
+
+    switch(currentTool) {
+        case 'brush':
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.stroke();
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+            break;
+            
+        case 'eraser':
+            ctx.save();
+            ctx.strokeStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.stroke();
+            ctx.restore();
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+            break;
+            
+        case 'rainbow':
+            drawRainbow(e);
+            break;
+            
+        case 'sparkle':
+            drawSparkle(e);
+            break;
+            
+        case 'confetti':
+            drawConfetti(e);
+            break;
+            
+        case 'shape':
+            if (shapes.length > 0) {
+                const lastShape = shapes[shapes.length - 1];
+                lastShape.size = Math.max(
+                    Math.abs(e.offsetX - lastShape.x),
+                    Math.abs(e.offsetY - lastShape.y)
+                ) / 2;
+                redrawCanvas();
+            }
+            break;
     }
 }
 
 function stopDrawing() {
     isDrawing = false;
-    ctx.beginPath();
 }
 
 // Flood fill algoritması
@@ -352,19 +419,11 @@ function hexToRgb(hex) {
 
 // Dosya işlemleri
 document.getElementById('clear-btn').addEventListener('click', () => {
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCanvas.width = canvas.width;
-    tempCanvas.height = canvas.height;
-    
-    // Mevcut resmi geçici canvas'a kopyala
-    tempCtx.drawImage(canvas, 0, 0);
-    
-    // Ana canvas'ı temizle
+    // Canvas'ı temizle
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Geçici canvas'tan sadece resmi geri kopyala
+    // Mevcut resmi tekrar çiz
     if (currentImageIndex >= 0 && currentImageIndex < images.length) {
         const img = new Image();
         img.crossOrigin = "anonymous";
@@ -378,6 +437,9 @@ document.getElementById('clear-btn').addEventListener('click', () => {
             const y = (canvas.height - img.height * scale) / 2;
             
             ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+            
+            // Şekilleri tekrar çiz
+            shapes.forEach(shape => shape.draw());
         };
         img.src = images[currentImageIndex];
     }
@@ -447,135 +509,6 @@ document.getElementById('party-btn').addEventListener('click', () => {
         if (count >= 100) clearInterval(interval);
     }, 50);
 });
-
-// Şekil butonları
-document.querySelectorAll('[id^="shape-"]').forEach(button => {
-    button.addEventListener('click', () => {
-        const shapeType = button.id.replace('shape-', '');
-        currentTool = 'shape';
-        selectedShape = shapeType;
-        
-        // Diğer butonların active sınıfını kaldır
-        document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
-        button.classList.add('active');
-    });
-});
-
-// Parti efekt butonları
-document.getElementById('party-rainbow').addEventListener('click', () => {
-    currentTool = 'rainbow';
-    document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
-    document.getElementById('party-rainbow').classList.add('active');
-});
-
-document.getElementById('party-sparkle').addEventListener('click', () => {
-    currentTool = 'sparkle';
-    document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
-    document.getElementById('party-sparkle').classList.add('active');
-});
-
-document.getElementById('party-confetti').addEventListener('click', () => {
-    currentTool = 'confetti';
-    document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
-    document.getElementById('party-confetti').classList.add('active');
-});
-
-// Canvas olayları
-canvas.addEventListener('mousedown', startDrawing);
-canvas.addEventListener('mousemove', draw);
-canvas.addEventListener('mouseup', stopDrawing);
-canvas.addEventListener('mouseout', stopDrawing);
-
-function startDrawing(e) {
-    isDrawing = true;
-    [lastX, lastY] = [e.offsetX, e.offsetY];
-    
-    if (currentTool === 'shape') {
-        const shape = new Shape(selectedShape, e.offsetX, e.offsetY, currentSize, currentColor);
-        shapes.push(shape);
-        redrawCanvas();
-    }
-}
-
-function draw(e) {
-    if (!isDrawing) return;
-
-    switch(currentTool) {
-        case 'brush':
-            ctx.beginPath();
-            ctx.moveTo(lastX, lastY);
-            ctx.lineTo(e.offsetX, e.offsetY);
-            ctx.stroke();
-            [lastX, lastY] = [e.offsetX, e.offsetY];
-            break;
-            
-        case 'eraser':
-            ctx.save();
-            ctx.strokeStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.moveTo(lastX, lastY);
-            ctx.lineTo(e.offsetX, e.offsetY);
-            ctx.stroke();
-            ctx.restore();
-            [lastX, lastY] = [e.offsetX, e.offsetY];
-            break;
-            
-        case 'rainbow':
-            drawRainbow(e);
-            break;
-            
-        case 'sparkle':
-            drawSparkle(e);
-            break;
-            
-        case 'confetti':
-            drawConfetti(e);
-            break;
-            
-        case 'shape':
-            const lastShape = shapes[shapes.length - 1];
-            if (lastShape) {
-                lastShape.size = Math.max(Math.abs(e.offsetX - lastShape.x), 
-                                       Math.abs(e.offsetY - lastShape.y));
-                redrawCanvas();
-            }
-            break;
-    }
-}
-
-function stopDrawing() {
-    isDrawing = false;
-}
-
-function redrawCanvas() {
-    // Canvas'ı temizle
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Mevcut resmi çiz
-    if (currentImageIndex >= 0 && currentImageIndex < images.length) {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = function() {
-            const scale = Math.min(
-                (canvas.width * 0.8) / img.width,
-                (canvas.height * 0.8) / img.height
-            );
-            
-            const x = (canvas.width - img.width * scale) / 2;
-            const y = (canvas.height - img.height * scale) / 2;
-            
-            ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
-            
-            // Tüm şekilleri tekrar çiz
-            shapes.forEach(shape => shape.draw());
-        };
-        img.src = images[currentImageIndex];
-    } else {
-        // Sadece şekilleri çiz
-        shapes.forEach(shape => shape.draw());
-    }
-}
 
 // Resim değişkenleri
 const REPO_OWNER = 'showman1907';
