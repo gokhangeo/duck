@@ -2,7 +2,13 @@
 const canvas = document.getElementById('drawing-canvas');
 const ctx = canvas.getContext('2d');
 
-// Değişkenler
+// Başlangıç ayarları
+ctx.strokeStyle = '#000000';
+ctx.lineJoin = 'round';
+ctx.lineCap = 'round';
+ctx.lineWidth = 10;
+
+// Aktif çizim durumu
 let isDrawing = false;
 let currentTool = 'brush';
 let currentColor = '#000000';
@@ -10,10 +16,14 @@ let currentSize = 10;
 let lastX = 0;
 let lastY = 0;
 let hue = 0;
-let direction = true;
-let isResizing = false;
+let partySize = 5;
+let partyDirection = true;
 let selectedShape = null;
 let shapes = [];
+let activeShape = null;
+let isDraggingShape = false;
+let isResizingShape = false;
+let resizeHandle = null;
 const isTouchDevice = 'ontouchstart' in window;
 
 // Şekil sınıfı
@@ -59,8 +69,19 @@ class Shape {
         }
 
         if (this.isSelected) {
-            ctx.strokeRect(this.x - this.size - 5, this.y - this.size - 5, 
-                          (this.size + 5) * 2, (this.size + 5) * 2);
+            // Seçim çerçevesi
+            ctx.strokeStyle = '#00ff00';
+            ctx.strokeRect(this.x - this.size - 10, this.y - this.size - 10, 
+                          (this.size + 10) * 2, (this.size + 10) * 2);
+            
+            // Boyutlandırma noktaları
+            const handles = this.getResizeHandles();
+            handles.forEach(handle => {
+                ctx.fillStyle = '#00ff00';
+                ctx.beginPath();
+                ctx.arc(handle.x, handle.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+            });
         }
         ctx.restore();
     }
@@ -99,7 +120,236 @@ class Shape {
         const distance = Math.sqrt((x - this.x) ** 2 + (y - this.y) ** 2);
         return distance <= this.size;
     }
+
+    getResizeHandles() {
+        return [
+            { x: this.x - this.size - 10, y: this.y - this.size - 10 }, // Sol üst
+            { x: this.x + this.size + 10, y: this.y - this.size - 10 }, // Sağ üst
+            { x: this.x - this.size - 10, y: this.y + this.size + 10 }, // Sol alt
+            { x: this.x + this.size + 10, y: this.y + this.size + 10 }  // Sağ alt
+        ];
+    }
+
+    isOnResizeHandle(x, y) {
+        const handles = this.getResizeHandles();
+        for (let i = 0; i < handles.length; i++) {
+            const handle = handles[i];
+            const distance = Math.sqrt((x - handle.x) ** 2 + (y - handle.y) ** 2);
+            if (distance <= 5) {
+                return i;
+            }
+        }
+        return -1;
+    }
 }
+
+// Parti efektleri
+function drawParty(e) {
+    ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+    ctx.lineWidth = partySize;
+    
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(e.offsetX, e.offsetY);
+    ctx.stroke();
+    
+    [lastX, lastY] = [e.offsetX, e.offsetY];
+    
+    hue += 3;
+    if (hue >= 360) hue = 0;
+    
+    if (partySize >= 50 || partySize <= 5) {
+        partyDirection = !partyDirection;
+    }
+    
+    if (partyDirection) {
+        partySize += 2;
+    } else {
+        partySize -= 2;
+    }
+}
+
+// Canvas olayları
+function startDrawing(e) {
+    isDrawing = true;
+    [lastX, lastY] = [e.offsetX, e.offsetY];
+
+    if (currentTool === 'shape') {
+        const newShape = new Shape(selectedShape, e.offsetX, e.offsetY, currentSize, currentColor);
+        shapes.push(newShape);
+        activeShape = newShape;
+        redrawCanvas();
+    } else if (currentTool === 'select') {
+        // Şekil seçimi veya boyutlandırma kontrolü
+        let clickedShape = null;
+        for (let i = shapes.length - 1; i >= 0; i--) {
+            const shape = shapes[i];
+            const handleIndex = shape.isOnResizeHandle(e.offsetX, e.offsetY);
+            
+            if (handleIndex !== -1 && shape.isSelected) {
+                isResizingShape = true;
+                resizeHandle = handleIndex;
+                activeShape = shape;
+                break;
+            } else if (shape.contains(e.offsetX, e.offsetY)) {
+                clickedShape = shape;
+                break;
+            }
+        }
+
+        if (clickedShape) {
+            isDraggingShape = true;
+            activeShape = clickedShape;
+            shapes.forEach(s => s.isSelected = false);
+            clickedShape.isSelected = true;
+        } else if (!isResizingShape) {
+            shapes.forEach(s => s.isSelected = false);
+            activeShape = null;
+        }
+        redrawCanvas();
+    }
+}
+
+function draw(e) {
+    if (!isDrawing) return;
+
+    switch(currentTool) {
+        case 'brush':
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.stroke();
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+            break;
+            
+        case 'eraser':
+            ctx.save();
+            ctx.strokeStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.stroke();
+            ctx.restore();
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+            break;
+            
+        case 'party':
+            drawParty(e);
+            break;
+            
+        case 'shape':
+            if (activeShape) {
+                activeShape.size = Math.max(
+                    Math.abs(e.offsetX - activeShape.x),
+                    Math.abs(e.offsetY - activeShape.y)
+                ) / 2;
+                redrawCanvas();
+            }
+            break;
+            
+        case 'select':
+            if (isDraggingShape && activeShape) {
+                activeShape.x = e.offsetX;
+                activeShape.y = e.offsetY;
+                redrawCanvas();
+            } else if (isResizingShape && activeShape) {
+                const dx = e.offsetX - activeShape.x;
+                const dy = e.offsetY - activeShape.y;
+                activeShape.size = Math.max(Math.abs(dx), Math.abs(dy));
+                redrawCanvas();
+            }
+            break;
+    }
+}
+
+function stopDrawing() {
+    isDrawing = false;
+    isDraggingShape = false;
+    isResizingShape = false;
+    resizeHandle = null;
+}
+
+// Temizle butonu
+document.getElementById('clear-btn').addEventListener('click', () => {
+    // Geçici canvas oluştur
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+    
+    // Mevcut resmi geçici canvas'a kopyala
+    if (currentImageIndex >= 0 && currentImageIndex < images.length) {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = function() {
+            const scale = Math.min(
+                (canvas.width * 0.8) / img.width,
+                (canvas.height * 0.8) / img.height
+            );
+            
+            const x = (canvas.width - img.width * scale) / 2;
+            const y = (canvas.height - img.height * scale) / 2;
+            
+            // Ana canvas'ı temizle
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Resmi çiz
+            ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+            
+            // Şekilleri tekrar çiz
+            shapes.forEach(shape => shape.draw());
+        };
+        img.src = images[currentImageIndex];
+    }
+});
+
+// Araç butonları
+document.getElementById('brush-tool').addEventListener('click', () => {
+    currentTool = 'brush';
+    updateToolButtons('brush-tool');
+});
+
+document.getElementById('eraser-tool').addEventListener('click', () => {
+    currentTool = 'eraser';
+    updateToolButtons('eraser-tool');
+});
+
+document.getElementById('party-tool').addEventListener('click', () => {
+    currentTool = 'party';
+    updateToolButtons('party-tool');
+    partySize = 5;
+    partyDirection = true;
+});
+
+// Şekil butonları
+document.querySelectorAll('[id^="shape-"]').forEach(button => {
+    button.addEventListener('click', () => {
+        const shapeType = button.id.replace('shape-', '');
+        currentTool = 'shape';
+        selectedShape = shapeType;
+        updateToolButtons(button.id);
+    });
+});
+
+// Seçim aracı
+document.getElementById('select-tool').addEventListener('click', () => {
+    currentTool = 'select';
+    updateToolButtons('select-tool');
+});
+
+function updateToolButtons(activeId) {
+    document.querySelectorAll('.tool-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.getElementById(activeId).classList.add('active');
+}
+
+// Event listeners
+canvas.addEventListener('mousedown', startDrawing);
+canvas.addEventListener('mousemove', draw);
+canvas.addEventListener('mouseup', stopDrawing);
+canvas.addEventListener('mouseout', stopDrawing);
 
 // Parti efektleri
 function drawRainbow(e) {
@@ -158,6 +408,22 @@ function drawConfetti(e) {
     }
 }
 
+// Parti efekt butonları
+document.getElementById('party-rainbow').addEventListener('click', () => {
+    currentTool = 'rainbow';
+    updateToolButtons('party-rainbow');
+});
+
+document.getElementById('party-sparkle').addEventListener('click', () => {
+    currentTool = 'sparkle';
+    updateToolButtons('party-sparkle');
+});
+
+document.getElementById('party-confetti').addEventListener('click', () => {
+    currentTool = 'confetti';
+    updateToolButtons('party-confetti');
+});
+
 // Canvas boyutlandırma
 function resizeCanvas() {
     const container = canvas.parentElement;
@@ -200,55 +466,6 @@ function createColorPalette() {
     });
 }
 
-// Araç butonlarını ayarla
-document.getElementById('brush-tool').addEventListener('click', () => {
-    currentTool = 'brush';
-    updateToolButtons('brush-tool');
-});
-
-document.getElementById('eraser-tool').addEventListener('click', () => {
-    currentTool = 'eraser';
-    updateToolButtons('eraser-tool');
-});
-
-document.getElementById('fill-tool').addEventListener('click', () => {
-    currentTool = 'fill';
-    updateToolButtons('fill-tool');
-});
-
-// Şekil butonları
-document.querySelectorAll('[id^="shape-"]').forEach(button => {
-    button.addEventListener('click', () => {
-        const shapeType = button.id.replace('shape-', '');
-        currentTool = 'shape';
-        selectedShape = shapeType;
-        updateToolButtons(button.id);
-    });
-});
-
-// Parti efekt butonları
-document.getElementById('party-rainbow').addEventListener('click', () => {
-    currentTool = 'rainbow';
-    updateToolButtons('party-rainbow');
-});
-
-document.getElementById('party-sparkle').addEventListener('click', () => {
-    currentTool = 'sparkle';
-    updateToolButtons('party-sparkle');
-});
-
-document.getElementById('party-confetti').addEventListener('click', () => {
-    currentTool = 'confetti';
-    updateToolButtons('party-confetti');
-});
-
-function updateToolButtons(activeId) {
-    document.querySelectorAll('.tool-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    document.getElementById(activeId).classList.add('active');
-}
-
 // Boyut butonlarını ayarla
 document.querySelectorAll('.size-btn').forEach(button => {
     button.addEventListener('click', () => {
@@ -287,164 +504,12 @@ function getCoordinates(e) {
     };
 }
 
-function startDrawing(e) {
-    isDrawing = true;
-    [lastX, lastY] = [e.offsetX, e.offsetY];
-
-    if (currentTool === 'shape' && selectedShape) {
-        const shape = new Shape(selectedShape, e.offsetX, e.offsetY, currentSize, currentColor);
-        shapes.push(shape);
-        redrawCanvas();
-    }
-}
-
-function draw(e) {
-    if (!isDrawing) return;
-
-    switch(currentTool) {
-        case 'brush':
-            ctx.beginPath();
-            ctx.moveTo(lastX, lastY);
-            ctx.lineTo(e.offsetX, e.offsetY);
-            ctx.stroke();
-            [lastX, lastY] = [e.offsetX, e.offsetY];
-            break;
-            
-        case 'eraser':
-            ctx.save();
-            ctx.strokeStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.moveTo(lastX, lastY);
-            ctx.lineTo(e.offsetX, e.offsetY);
-            ctx.stroke();
-            ctx.restore();
-            [lastX, lastY] = [e.offsetX, e.offsetY];
-            break;
-            
-        case 'rainbow':
-            drawRainbow(e);
-            break;
-            
-        case 'sparkle':
-            drawSparkle(e);
-            break;
-            
-        case 'confetti':
-            drawConfetti(e);
-            break;
-            
-        case 'shape':
-            if (shapes.length > 0) {
-                const lastShape = shapes[shapes.length - 1];
-                lastShape.size = Math.max(
-                    Math.abs(e.offsetX - lastShape.x),
-                    Math.abs(e.offsetY - lastShape.y)
-                ) / 2;
-                redrawCanvas();
-            }
-            break;
-    }
-}
-
-function stopDrawing() {
-    isDrawing = false;
-}
-
-// Flood fill algoritması
-function floodFill(startX, startY, fillColor) {
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const pixels = imageData.data;
-    const startPos = (startY * canvas.width + startX) * 4;
-    
-    const startR = pixels[startPos];
-    const startG = pixels[startPos + 1];
-    const startB = pixels[startPos + 2];
-    
-    const fillColorObj = hexToRgb(fillColor);
-    if (!fillColorObj) return;
-    
-    const fillR = fillColorObj.r;
-    const fillG = fillColorObj.g;
-    const fillB = fillColorObj.b;
-    
-    if (startR === fillR && startG === fillG && startB === fillB) {
-        return;
-    }
-    
-    const tolerance = 30;
-    const queue = [[startX, startY]];
-    const visited = new Set();
-    
-    function matchesStartColor(pos) {
-        return Math.abs(pixels[pos] - startR) <= tolerance &&
-               Math.abs(pixels[pos + 1] - startG) <= tolerance &&
-               Math.abs(pixels[pos + 2] - startB) <= tolerance;
-    }
-    
-    function setPixel(pos) {
-        pixels[pos] = fillR;
-        pixels[pos + 1] = fillG;
-        pixels[pos + 2] = fillB;
-        pixels[pos + 3] = 255;
-    }
-    
-    while (queue.length) {
-        const [x, y] = queue.shift();
-        const pos = (y * canvas.width + x) * 4;
-        const key = `${x},${y}`;
-        
-        if (x < 0 || x >= canvas.width || y < 0 || y >= canvas.height ||
-            visited.has(key) || !matchesStartColor(pos)) {
-            continue;
-        }
-        
-        visited.add(key);
-        setPixel(pos);
-        
-        queue.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
-    }
-    
-    ctx.putImageData(imageData, 0, 0);
-}
-
-// Yardımcı fonksiyonlar
-function hexToRgb(hex) {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? {
-        r: parseInt(result[1], 16),
-        g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16)
-    } : null;
+function redrawCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    shapes.forEach(shape => shape.draw());
 }
 
 // Dosya işlemleri
-document.getElementById('clear-btn').addEventListener('click', () => {
-    // Canvas'ı temizle
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Mevcut resmi tekrar çiz
-    if (currentImageIndex >= 0 && currentImageIndex < images.length) {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = function() {
-            const scale = Math.min(
-                (canvas.width * 0.8) / img.width,
-                (canvas.height * 0.8) / img.height
-            );
-            
-            const x = (canvas.width - img.width * scale) / 2;
-            const y = (canvas.height - img.height * scale) / 2;
-            
-            ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
-            
-            // Şekilleri tekrar çiz
-            shapes.forEach(shape => shape.draw());
-        };
-        img.src = images[currentImageIndex];
-    }
-});
-
 document.getElementById('save-btn').addEventListener('click', () => {
     const link = document.createElement('a');
     link.download = 'cizim.png';
