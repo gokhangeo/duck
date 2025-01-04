@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gizem Elgül - Boyama Defteri</title>
+    <title>Gizem Elgül Boyama Defteri</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#FF69B4">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -308,6 +308,30 @@
 
             <div class="panel">
                 <div class="panel-title">
+                    <i class="fas fa-shapes"></i>
+                    Şekiller
+                </div>
+                <div class="tool-group">
+                    <button id="shape-circle" class="tool-btn">
+                        <i class="fas fa-circle"></i> Daire
+                    </button>
+                    <button id="shape-square" class="tool-btn">
+                        <i class="fas fa-square"></i> Kare
+                    </button>
+                    <button id="shape-triangle" class="tool-btn">
+                        <i class="fas fa-play fa-rotate-270"></i> Üçgen
+                    </button>
+                    <button id="shape-star" class="tool-btn">
+                        <i class="fas fa-star"></i> Yıldız
+                    </button>
+                    <button id="shape-heart" class="tool-btn">
+                        <i class="fas fa-heart"></i> Kalp
+                    </button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">
                     <i class="fas fa-ruler"></i>
                     Boyut
                 </div>
@@ -340,73 +364,19 @@
                     <i class="fas fa-file"></i>
                     Dosya İşlemleri
                 </div>
-                <label id="upload-label" for="file-input">
-                    <i class="fas fa-upload"></i> Resim Yükle
-                </label>
-                <input type="file" id="file-input" accept="image/*">
-                <button id="clear-btn" class="action-btn">
-                    <i class="fas fa-trash"></i> Temizle
-                </button>
-                <button id="save-btn" class="action-btn">
-                    <i class="fas fa-save"></i> Kaydet
-                </button>
-            </div>
-
-            <div class="panel">
-                <div class="panel-title">
-                    <i class="fas fa-shapes"></i>
-                    Şekiller
-                </div>
                 <div class="tool-group">
-                    <button id="shape-circle" class="tool-btn">
-                        <i class="fas fa-circle"></i> Daire
+                    <label id="upload-label" for="file-input">
+                        <i class="fas fa-upload"></i> Resim Yükle
+                    </label>
+                    <input type="file" id="file-input" accept="image/*">
+                    <button id="clear-btn" class="action-btn">
+                        <i class="fas fa-trash"></i> Temizle
                     </button>
-                    <button id="shape-square" class="tool-btn">
-                        <i class="fas fa-square"></i> Kare
-                    </button>
-                    <button id="shape-triangle" class="tool-btn">
-                        <i class="fas fa-play fa-rotate-270"></i> Üçgen
-                    </button>
-                    <button id="shape-star" class="tool-btn">
-                        <i class="fas fa-star"></i> Yıldız
-                    </button>
-                    <button id="shape-heart" class="tool-btn">
-                        <i class="fas fa-heart"></i> Kalp
+                    <button id="save-btn" class="action-btn">
+                        <i class="fas fa-save"></i> Kaydet
                     </button>
                 </div>
             </div>
-
-            <div class="panel">
-                <div class="panel-title">
-                    <i class="fas fa-magic"></i>
-                    Parti Efektleri
-                </div>
-                <div class="tool-group">
-                    <button id="party-rainbow" class="tool-btn">
-                        <i class="fas fa-paint-brush"></i> Gökkuşağı
-                    </button>
-                    <button id="party-sparkle" class="tool-btn">
-                        <i class="fas fa-star"></i> Işıltı
-                    </button>
-                    <button id="party-confetti" class="tool-btn">
-                        <i class="fas fa-birthday-cake"></i> Konfeti
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- PWA Kurulum Bildirimi -->
-    <div id="install-prompt" style="display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: white; padding: 15px 25px; border-radius: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1000;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <i class="fas fa-download" style="color: #FF69B4;"></i>
-            <span>Ana ekranınıza eklemek ister misiniz?</span>
-            <button id="install-btn" style="background: #FF69B4; color: white; border: none; padding: 8px 15px; border-radius: 15px; cursor: pointer; margin-left: 10px;">
-                Ekle
-            </button>
-            <button id="close-prompt" style="background: none; border: none; padding: 5px; cursor: pointer;">
-                <i class="fas fa-times"></i>
-            </button>
         </div>
     </div>
 

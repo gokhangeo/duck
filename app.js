@@ -2,666 +2,439 @@
 const canvas = document.getElementById('drawing-canvas');
 const ctx = canvas.getContext('2d');
 
-// Başlangıç ayarları
-ctx.strokeStyle = '#000000';
-ctx.lineJoin = 'round';
-ctx.lineCap = 'round';
-ctx.lineWidth = 10;
-
-// Aktif çizim durumu
-let isDrawing = false;
+// Araç ve mod değişkenleri
 let currentTool = 'brush';
+let isDrawing = false;
 let currentColor = '#000000';
-let currentSize = 10;
+let brushSize = 10;
 let lastX = 0;
 let lastY = 0;
-let hue = 0;
-let partySize = 5;
-let partyDirection = true;
+let partyHue = 0;
 let selectedShape = null;
-let shapes = [];
-let activeShape = null;
-let isDraggingShape = false;
-let isResizingShape = false;
+let isResizing = false;
 let resizeHandle = null;
-const isTouchDevice = 'ontouchstart' in window;
+let shapes = [];
 
-// Şekil sınıfı
-class Shape {
-    constructor(type, x, y, size, color) {
-        this.type = type;
-        this.x = x;
-        this.y = y;
-        this.size = size;
-        this.color = color;
-        this.isSelected = false;
-    }
+// Parti efekti için değişkenler
+let partyMode = false;
+let partySize = 10;
+let partySizeDirection = 1;
 
-    draw() {
-        ctx.save();
-        ctx.fillStyle = this.color;
-        ctx.strokeStyle = this.isSelected ? '#00ff00' : this.color;
-        ctx.lineWidth = 2;
+// Şekil çizimi için değişkenler
+let isDrawingShape = false;
+let currentShapeType = null;
+let shapeStartX = 0;
+let shapeStartY = 0;
 
-        switch(this.type) {
-            case 'circle':
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
-                break;
-            case 'square':
-                ctx.fillRect(this.x - this.size, this.y - this.size, this.size * 2, this.size * 2);
-                break;
-            case 'triangle':
-                ctx.beginPath();
-                ctx.moveTo(this.x, this.y - this.size);
-                ctx.lineTo(this.x - this.size, this.y + this.size);
-                ctx.lineTo(this.x + this.size, this.y + this.size);
-                ctx.closePath();
-                ctx.fill();
-                break;
-            case 'star':
-                this.drawStar();
-                break;
-            case 'heart':
-                this.drawHeart();
-                break;
-        }
+// Seçim modu için değişkenler
+let isSelecting = false;
+let selectedShapeIndex = -1;
 
-        if (this.isSelected) {
-            // Seçim çerçevesi
-            ctx.strokeStyle = '#00ff00';
-            ctx.strokeRect(this.x - this.size - 10, this.y - this.size - 10, 
-                          (this.size + 10) * 2, (this.size + 10) * 2);
-            
-            // Boyutlandırma noktaları
-            const handles = this.getResizeHandles();
-            handles.forEach(handle => {
-                ctx.fillStyle = '#00ff00';
-                ctx.beginPath();
-                ctx.arc(handle.x, handle.y, 5, 0, Math.PI * 2);
-                ctx.fill();
-            });
-        }
-        ctx.restore();
-    }
-
-    drawStar() {
-        ctx.beginPath();
-        for (let i = 0; i < 5; i++) {
-            ctx.lineTo(Math.cos((18 + i * 72) * Math.PI / 180) * this.size + this.x,
-                      Math.sin((18 + i * 72) * Math.PI / 180) * this.size + this.y);
-            ctx.lineTo(Math.cos((54 + i * 72) * Math.PI / 180) * (this.size/2) + this.x,
-                      Math.sin((54 + i * 72) * Math.PI / 180) * (this.size/2) + this.y);
-        }
-        ctx.closePath();
-        ctx.fill();
-    }
-
-    drawHeart() {
-        ctx.beginPath();
-        ctx.moveTo(this.x, this.y + this.size * 0.7);
-        ctx.bezierCurveTo(this.x, this.y + this.size * 0.7, 
-                         this.x - this.size, this.y + this.size * 0.4,
-                         this.x - this.size, this.y);
-        ctx.bezierCurveTo(this.x - this.size, this.y - this.size * 0.8,
-                         this.x, this.y - this.size * 0.8,
-                         this.x, this.y);
-        ctx.bezierCurveTo(this.x, this.y - this.size * 0.8,
-                         this.x + this.size, this.y - this.size * 0.8,
-                         this.x + this.size, this.y);
-        ctx.bezierCurveTo(this.x + this.size, this.y + this.size * 0.4,
-                         this.x, this.y + this.size * 0.7,
-                         this.x, this.y + this.size * 0.7);
-        ctx.fill();
-    }
-
-    contains(x, y) {
-        const distance = Math.sqrt((x - this.x) ** 2 + (y - this.y) ** 2);
-        return distance <= this.size;
-    }
-
-    getResizeHandles() {
-        return [
-            { x: this.x - this.size - 10, y: this.y - this.size - 10 }, // Sol üst
-            { x: this.x + this.size + 10, y: this.y - this.size - 10 }, // Sağ üst
-            { x: this.x - this.size - 10, y: this.y + this.size + 10 }, // Sol alt
-            { x: this.x + this.size + 10, y: this.y + this.size + 10 }  // Sağ alt
-        ];
-    }
-
-    isOnResizeHandle(x, y) {
-        const handles = this.getResizeHandles();
-        for (let i = 0; i < handles.length; i++) {
-            const handle = handles[i];
-            const distance = Math.sqrt((x - handle.x) ** 2 + (y - handle.y) ** 2);
-            if (distance <= 5) {
-                return i;
-            }
-        }
-        return -1;
-    }
+// Canvas boyutunu ayarla
+function resizeCanvas() {
+    const container = document.getElementById('canvas-container');
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+    redrawCanvas();
 }
 
-// Parti efektleri
-function drawParty(e) {
-    ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
-    ctx.lineWidth = partySize;
-    
-    ctx.beginPath();
-    ctx.moveTo(lastX, lastY);
-    ctx.lineTo(e.offsetX, e.offsetY);
-    ctx.stroke();
-    
-    [lastX, lastY] = [e.offsetX, e.offsetY];
-    
-    hue += 3;
-    if (hue >= 360) hue = 0;
-    
-    if (partySize >= 50 || partySize <= 5) {
-        partyDirection = !partyDirection;
-    }
-    
-    if (partyDirection) {
-        partySize += 2;
-    } else {
-        partySize -= 2;
-    }
-}
-
-// Canvas olayları
-function startDrawing(e) {
-    isDrawing = true;
-    [lastX, lastY] = [e.offsetX, e.offsetY];
-
-    if (currentTool === 'shape') {
-        const newShape = new Shape(selectedShape, e.offsetX, e.offsetY, currentSize, currentColor);
-        shapes.push(newShape);
-        activeShape = newShape;
-        redrawCanvas();
-    } else if (currentTool === 'select') {
-        // Şekil seçimi veya boyutlandırma kontrolü
-        let clickedShape = null;
-        for (let i = shapes.length - 1; i >= 0; i--) {
-            const shape = shapes[i];
-            const handleIndex = shape.isOnResizeHandle(e.offsetX, e.offsetY);
-            
-            if (handleIndex !== -1 && shape.isSelected) {
-                isResizingShape = true;
-                resizeHandle = handleIndex;
-                activeShape = shape;
-                break;
-            } else if (shape.contains(e.offsetX, e.offsetY)) {
-                clickedShape = shape;
-                break;
-            }
-        }
-
-        if (clickedShape) {
-            isDraggingShape = true;
-            activeShape = clickedShape;
-            shapes.forEach(s => s.isSelected = false);
-            clickedShape.isSelected = true;
-        } else if (!isResizingShape) {
-            shapes.forEach(s => s.isSelected = false);
-            activeShape = null;
-        }
-        redrawCanvas();
-    }
-}
-
-function draw(e) {
-    if (!isDrawing) return;
-
-    switch(currentTool) {
-        case 'brush':
-            ctx.beginPath();
-            ctx.moveTo(lastX, lastY);
-            ctx.lineTo(e.offsetX, e.offsetY);
-            ctx.stroke();
-            [lastX, lastY] = [e.offsetX, e.offsetY];
-            break;
-            
-        case 'eraser':
-            ctx.save();
-            ctx.strokeStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.moveTo(lastX, lastY);
-            ctx.lineTo(e.offsetX, e.offsetY);
-            ctx.stroke();
-            ctx.restore();
-            [lastX, lastY] = [e.offsetX, e.offsetY];
-            break;
-            
-        case 'party':
-            drawParty(e);
-            break;
-            
-        case 'shape':
-            if (activeShape) {
-                activeShape.size = Math.max(
-                    Math.abs(e.offsetX - activeShape.x),
-                    Math.abs(e.offsetY - activeShape.y)
-                ) / 2;
-                redrawCanvas();
-            }
-            break;
-            
-        case 'select':
-            if (isDraggingShape && activeShape) {
-                activeShape.x = e.offsetX;
-                activeShape.y = e.offsetY;
-                redrawCanvas();
-            } else if (isResizingShape && activeShape) {
-                const dx = e.offsetX - activeShape.x;
-                const dy = e.offsetY - activeShape.y;
-                activeShape.size = Math.max(Math.abs(dx), Math.abs(dy));
-                redrawCanvas();
-            }
-            break;
-    }
-}
-
-function stopDrawing() {
-    isDrawing = false;
-    isDraggingShape = false;
-    isResizingShape = false;
-    resizeHandle = null;
-}
-
-// Temizle butonu
-document.getElementById('clear-btn').addEventListener('click', () => {
-    // Geçici canvas oluştur
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCanvas.width = canvas.width;
-    tempCanvas.height = canvas.height;
-    
-    // Mevcut resmi geçici canvas'a kopyala
-    if (currentImageIndex >= 0 && currentImageIndex < images.length) {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = function() {
-            const scale = Math.min(
-                (canvas.width * 0.8) / img.width,
-                (canvas.height * 0.8) / img.height
-            );
-            
-            const x = (canvas.width - img.width * scale) / 2;
-            const y = (canvas.height - img.height * scale) / 2;
-            
-            // Ana canvas'ı temizle
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Resmi çiz
-            ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
-            
-            // Şekilleri tekrar çiz
-            shapes.forEach(shape => shape.draw());
-        };
-        img.src = images[currentImageIndex];
-    }
-});
-
-// Araç butonları
-document.getElementById('brush-tool').addEventListener('click', () => {
-    currentTool = 'brush';
-    updateToolButtons('brush-tool');
-});
-
-document.getElementById('eraser-tool').addEventListener('click', () => {
-    currentTool = 'eraser';
-    updateToolButtons('eraser-tool');
-});
-
-document.getElementById('party-tool').addEventListener('click', () => {
-    currentTool = 'party';
-    updateToolButtons('party-tool');
-    partySize = 5;
-    partyDirection = true;
-});
-
-// Şekil butonları
-document.querySelectorAll('[id^="shape-"]').forEach(button => {
-    button.addEventListener('click', () => {
-        const shapeType = button.id.replace('shape-', '');
-        currentTool = 'shape';
-        selectedShape = shapeType;
-        updateToolButtons(button.id);
-    });
-});
-
-// Seçim aracı
-document.getElementById('select-tool').addEventListener('click', () => {
-    currentTool = 'select';
-    updateToolButtons('select-tool');
-});
-
-function updateToolButtons(activeId) {
-    document.querySelectorAll('.tool-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    document.getElementById(activeId).classList.add('active');
-}
-
-// Event listeners
+// Fare olayları
 canvas.addEventListener('mousedown', startDrawing);
 canvas.addEventListener('mousemove', draw);
 canvas.addEventListener('mouseup', stopDrawing);
 canvas.addEventListener('mouseout', stopDrawing);
 
-// Parti efektleri
-function drawRainbow(e) {
-    ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
-    ctx.beginPath();
-    ctx.moveTo(lastX, lastY);
-    ctx.lineTo(e.offsetX, e.offsetY);
-    ctx.stroke();
-    [lastX, lastY] = [e.offsetX, e.offsetY];
+// Dokunmatik olaylar
+canvas.addEventListener('touchstart', handleTouchStart);
+canvas.addEventListener('touchmove', handleTouchMove);
+canvas.addEventListener('touchend', handleTouchEnd);
+
+// Araç butonları
+document.getElementById('brush-tool').addEventListener('click', () => setTool('brush'));
+document.getElementById('eraser-tool').addEventListener('click', () => setTool('eraser'));
+document.getElementById('party-tool').addEventListener('click', () => setTool('party'));
+document.getElementById('select-tool').addEventListener('click', () => setTool('select'));
+
+// Şekil butonları
+document.getElementById('shape-circle').addEventListener('click', () => setShape('circle'));
+document.getElementById('shape-square').addEventListener('click', () => setShape('square'));
+document.getElementById('shape-triangle').addEventListener('click', () => setShape('triangle'));
+document.getElementById('shape-star').addEventListener('click', () => setShape('star'));
+document.getElementById('shape-heart').addEventListener('click', () => setShape('heart'));
+
+function setTool(tool) {
+    currentTool = tool;
+    document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`${tool}-tool`).classList.add('active');
     
-    hue++;
-    if (hue >= 360) hue = 0;
-    
-    if (ctx.lineWidth >= 50 || ctx.lineWidth <= 5) {
-        direction = !direction;
-    }
-    
-    if (direction) {
-        ctx.lineWidth++;
+    if (tool === 'select') {
+        canvas.style.cursor = 'pointer';
     } else {
-        ctx.lineWidth--;
+        canvas.style.cursor = 'crosshair';
     }
 }
 
-function drawSparkle(e) {
-    const size = Math.random() * 10 + 5;
-    const angle = Math.random() * Math.PI * 2;
-    const colors = ['#FFD700', '#FFA500', '#FF69B4', '#00FF00', '#4169E1'];
-    
-    ctx.save();
-    ctx.translate(e.offsetX, e.offsetY);
-    ctx.rotate(angle);
-    ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
-    
-    ctx.beginPath();
-    for (let i = 0; i < 5; i++) {
-        ctx.lineTo(Math.cos((18 + i * 72) * Math.PI / 180) * size,
-                  Math.sin((18 + i * 72) * Math.PI / 180) * size);
-        ctx.lineTo(Math.cos((54 + i * 72) * Math.PI / 180) * (size/2),
-                  Math.sin((54 + i * 72) * Math.PI / 180) * (size/2));
-    }
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
+function setShape(shape) {
+    currentShapeType = shape;
+    setTool('shape');
 }
 
-function drawConfetti(e) {
-    const colors = ['#FF69B4', '#4169E1', '#FFD700', '#32CD32', '#FF4500'];
-    const size = Math.random() * 10 + 5;
-    
-    for (let i = 0; i < 5; i++) {
-        const x = e.offsetX + (Math.random() - 0.5) * 50;
-        const y = e.offsetY + (Math.random() - 0.5) * 50;
-        ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
-        ctx.fillRect(x, y, size, size);
+function startDrawing(e) {
+    isDrawing = true;
+    const pos = getMousePos(canvas, e);
+    lastX = pos.x;
+    lastY = pos.y;
+
+    if (currentTool === 'shape') {
+        isDrawingShape = true;
+        shapeStartX = pos.x;
+        shapeStartY = pos.y;
+    } else if (currentTool === 'select') {
+        handleSelection(pos.x, pos.y);
     }
 }
 
-// Parti efekt butonları
-document.getElementById('party-rainbow').addEventListener('click', () => {
-    currentTool = 'rainbow';
-    updateToolButtons('party-rainbow');
-});
+function draw(e) {
+    if (!isDrawing) return;
+    
+    const pos = getMousePos(canvas, e);
+    const x = pos.x;
+    const y = pos.y;
 
-document.getElementById('party-sparkle').addEventListener('click', () => {
-    currentTool = 'sparkle';
-    updateToolButtons('party-sparkle');
-});
-
-document.getElementById('party-confetti').addEventListener('click', () => {
-    currentTool = 'confetti';
-    updateToolButtons('party-confetti');
-});
-
-// Canvas boyutlandırma
-function resizeCanvas() {
-    const container = canvas.parentElement;
-    canvas.width = container.clientWidth;
-    canvas.height = container.clientHeight;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-}
-
-// Pencere boyutu değiştiğinde canvas'ı yeniden boyutlandır
-window.addEventListener('resize', resizeCanvas);
-
-// Renk paleti oluştur
-function createColorPalette() {
-    const colors = [
-        '#000000', '#ffffff', '#ff0000', '#00ff00', '#0000ff', '#ffff00',
-        '#00ffff', '#ff00ff', '#c0c0c0', '#808080', '#800000', '#808000',
-        '#008000', '#800080', '#008080', '#000080', '#ff6b6b', '#4ecdc4',
-        '#45b7d1', '#96ceb4', '#ffeead', '#ff6f69', '#ffcc5c', '#88d8b0'
-    ];
-
-    const palette = document.getElementById('color-palette');
-    colors.forEach(color => {
-        const button = document.createElement('button');
-        button.className = 'color-btn';
-        button.style.backgroundColor = color;
-        if (color === currentColor) button.classList.add('active');
-        button.addEventListener('click', () => {
-            document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('active'));
-            button.classList.add('active');
-            currentColor = color;
-            if (currentTool === 'eraser') {
-                currentTool = 'brush';
-                document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
-                document.getElementById('brush-tool').classList.add('active');
-            }
-            updateBrushStyle();
-        });
-        palette.appendChild(button);
-    });
-}
-
-// Boyut butonlarını ayarla
-document.querySelectorAll('.size-btn').forEach(button => {
-    button.addEventListener('click', () => {
-        document.querySelectorAll('.size-btn').forEach(btn => btn.classList.remove('active'));
-        button.classList.add('active');
-        currentSize = parseInt(button.dataset.size);
-        updateBrushStyle();
-    });
-});
-
-// Fırça stilini güncelle
-function updateBrushStyle() {
-    if (currentTool === 'eraser') {
-        ctx.strokeStyle = '#ffffff';
+    if (currentTool === 'shape' && isDrawingShape) {
+        redrawCanvas();
+        drawShape(currentShapeType, shapeStartX, shapeStartY, x - shapeStartX, y - shapeStartY);
+    } else if (currentTool === 'party') {
+        drawPartyLine(lastX, lastY, x, y);
     } else {
-        ctx.strokeStyle = currentColor;
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(x, y);
+        ctx.strokeStyle = currentTool === 'eraser' ? '#ffffff' : currentColor;
+        ctx.lineWidth = brushSize;
+        ctx.lineCap = 'round';
+        ctx.stroke();
     }
-    ctx.lineWidth = currentSize;
+
+    lastX = x;
+    lastY = y;
+}
+
+function stopDrawing() {
+    isDrawing = false;
+    
+    if (currentTool === 'shape' && isDrawingShape) {
+        isDrawingShape = false;
+        const pos = getMousePos(canvas, event);
+        const shape = {
+            type: currentShapeType,
+            x: shapeStartX,
+            y: shapeStartY,
+            width: pos.x - shapeStartX,
+            height: pos.y - shapeStartY,
+            color: currentColor
+        };
+        shapes.push(shape);
+        redrawCanvas();
+    }
+}
+
+function drawPartyLine(x1, y1, x2, y2) {
+    // Parti efekti için değişken fırça boyutu
+    partySize += partySizeDirection;
+    if (partySize >= 50 || partySize <= 5) {
+        partySizeDirection *= -1;
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.strokeStyle = `hsl(${partyHue}, 100%, 50%)`;
+    ctx.lineWidth = partySize;
     ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+    ctx.stroke();
+
+    partyHue = (partyHue + 10) % 360;
 }
 
-// Çizim olayları
-canvas.addEventListener(isTouchDevice ? 'touchstart' : 'mousedown', startDrawing);
-canvas.addEventListener(isTouchDevice ? 'touchmove' : 'mousemove', draw);
-canvas.addEventListener(isTouchDevice ? 'touchend' : 'mouseup', stopDrawing);
-canvas.addEventListener('mouseleave', stopDrawing);
+function drawShape(type, x, y, width, height) {
+    ctx.beginPath();
+    ctx.strokeStyle = currentColor;
+    ctx.fillStyle = currentColor;
+    ctx.lineWidth = 2;
 
-function getCoordinates(e) {
-    const rect = canvas.getBoundingClientRect();
-    const clientX = isTouchDevice ? e.touches[0].clientX : e.clientX;
-    const clientY = isTouchDevice ? e.touches[0].clientY : e.clientY;
-    return {
-        x: Math.floor((clientX - rect.left) * (canvas.width / rect.width)),
-        y: Math.floor((clientY - rect.top) * (canvas.height / rect.height))
-    };
+    switch (type) {
+        case 'circle':
+            const radius = Math.sqrt(width * width + height * height) / 2;
+            ctx.arc(x + width/2, y + height/2, radius, 0, Math.PI * 2);
+            break;
+        case 'square':
+            ctx.rect(x, y, width, height);
+            break;
+        case 'triangle':
+            ctx.moveTo(x + width/2, y);
+            ctx.lineTo(x + width, y + height);
+            ctx.lineTo(x, y + height);
+            ctx.closePath();
+            break;
+        case 'star':
+            drawStar(x + width/2, y + height/2, 5, width/2, height/4);
+            break;
+        case 'heart':
+            drawHeart(x, y, width, height);
+            break;
+    }
+    
+    ctx.stroke();
+    ctx.fill();
+}
+
+function drawStar(cx, cy, spikes, outerRadius, innerRadius) {
+    let rot = Math.PI / 2 * 3;
+    let x = cx;
+    let y = cy;
+    let step = Math.PI / spikes;
+
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - outerRadius);
+
+    for(let i = 0; i < spikes; i++) {
+        x = cx + Math.cos(rot) * outerRadius;
+        y = cy + Math.sin(rot) * outerRadius;
+        ctx.lineTo(x, y);
+        rot += step;
+
+        x = cx + Math.cos(rot) * innerRadius;
+        y = cy + Math.sin(rot) * innerRadius;
+        ctx.lineTo(x, y);
+        rot += step;
+    }
+    
+    ctx.lineTo(cx, cy - outerRadius);
+    ctx.closePath();
+}
+
+function drawHeart(x, y, width, height) {
+    const topCurveHeight = height * 0.3;
+    ctx.beginPath();
+    ctx.moveTo(x + width/2, y + height);
+    ctx.bezierCurveTo(x, y + height/2, x, y, x + width/2, y + topCurveHeight);
+    ctx.bezierCurveTo(x + width, y, x + width, y + height/2, x + width/2, y + height);
+    ctx.closePath();
+}
+
+function handleSelection(x, y) {
+    selectedShapeIndex = -1;
+    for (let i = shapes.length - 1; i >= 0; i--) {
+        const shape = shapes[i];
+        if (isPointInShape(x, y, shape)) {
+            selectedShapeIndex = i;
+            break;
+        }
+    }
+    redrawCanvas();
+}
+
+function isPointInShape(x, y, shape) {
+    const { type, x: shapeX, y: shapeY, width, height } = shape;
+    
+    switch (type) {
+        case 'circle':
+            const radius = Math.sqrt(width * width + height * height) / 2;
+            const centerX = shapeX + width/2;
+            const centerY = shapeY + height/2;
+            const distance = Math.sqrt((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY));
+            return distance <= radius;
+        case 'square':
+            return x >= shapeX && x <= shapeX + width && y >= shapeY && y <= shapeY + height;
+        case 'triangle':
+            return isPointInTriangle(x, y, 
+                { x: shapeX + width/2, y: shapeY },
+                { x: shapeX + width, y: shapeY + height },
+                { x: shapeX, y: shapeY + height }
+            );
+        case 'star':
+        case 'heart':
+            // Basitleştirilmiş sınırlayıcı kutu kontrolü
+            return x >= shapeX && x <= shapeX + width && y >= shapeY && y <= shapeY + height;
+    }
+    return false;
+}
+
+function isPointInTriangle(px, py, v1, v2, v3) {
+    const area = Math.abs((v2.x - v1.x) * (v3.y - v1.y) - (v3.x - v1.x) * (v2.y - v1.y)) / 2;
+    const a1 = Math.abs((v1.x - px) * (v2.y - py) - (v2.x - px) * (v1.y - py)) / 2;
+    const a2 = Math.abs((v2.x - px) * (v3.y - py) - (v3.x - px) * (v2.y - py)) / 2;
+    const a3 = Math.abs((v3.x - px) * (v1.y - py) - (v1.x - px) * (v3.y - py)) / 2;
+    return Math.abs(area - (a1 + a2 + a3)) < 0.1;
 }
 
 function redrawCanvas() {
+    // Geçici canvas oluştur
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+    const tempCtx = tempCanvas.getContext('2d');
+
+    // Mevcut canvas içeriğini geçici canvas'a kopyala
+    tempCtx.drawImage(canvas, 0, 0);
+
+    // Ana canvas'ı temizle
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    shapes.forEach(shape => shape.draw());
+
+    // Geçici canvas'ı geri çiz
+    ctx.drawImage(tempCanvas, 0, 0);
+
+    // Şekilleri çiz
+    shapes.forEach((shape, index) => {
+        ctx.save();
+        if (index === selectedShapeIndex) {
+            // Seçili şekil için vurgulama
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.strokeRect(shape.x - 5, shape.y - 5, shape.width + 10, shape.height + 10);
+            ctx.setLineDash([]);
+            
+            // Boyutlandırma tutamaçları
+            drawResizeHandles(shape);
+        }
+        ctx.fillStyle = shape.color;
+        ctx.strokeStyle = shape.color;
+        drawShape(shape.type, shape.x, shape.y, shape.width, shape.height);
+        ctx.restore();
+    });
 }
 
-// Dosya işlemleri
+function drawResizeHandles(shape) {
+    const handles = [
+        { x: shape.x - 5, y: shape.y - 5 },
+        { x: shape.x + shape.width/2 - 5, y: shape.y - 5 },
+        { x: shape.x + shape.width - 5, y: shape.y - 5 },
+        { x: shape.x - 5, y: shape.y + shape.height/2 - 5 },
+        { x: shape.x + shape.width - 5, y: shape.y + shape.height/2 - 5 },
+        { x: shape.x - 5, y: shape.y + shape.height - 5 },
+        { x: shape.x + shape.width/2 - 5, y: shape.y + shape.height - 5 },
+        { x: shape.x + shape.width - 5, y: shape.y + shape.height - 5 }
+    ];
+
+    ctx.fillStyle = '#00ff00';
+    handles.forEach(handle => {
+        ctx.fillRect(handle.x, handle.y, 10, 10);
+    });
+}
+
+// Yardımcı fonksiyonlar
+function getMousePos(canvas, evt) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    if (evt.touches) {
+        return {
+            x: (evt.touches[0].clientX - rect.left) * scaleX,
+            y: (evt.touches[0].clientY - rect.top) * scaleY
+        };
+    }
+    
+    return {
+        x: (evt.clientX - rect.left) * scaleX,
+        y: (evt.clientY - rect.top) * scaleY
+    };
+}
+
+function handleTouchStart(e) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const mouseEvent = new MouseEvent('mousedown', {
+        clientX: touch.clientX,
+        clientY: touch.clientY
+    });
+    canvas.dispatchEvent(mouseEvent);
+}
+
+function handleTouchMove(e) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const mouseEvent = new MouseEvent('mousemove', {
+        clientX: touch.clientX,
+        clientY: touch.clientY
+    });
+    canvas.dispatchEvent(mouseEvent);
+}
+
+function handleTouchEnd(e) {
+    e.preventDefault();
+    const mouseEvent = new MouseEvent('mouseup', {});
+    canvas.dispatchEvent(mouseEvent);
+}
+
+// Renk paletini oluştur
+const colors = [
+    '#000000', '#ffffff', '#ff0000', '#00ff00', '#0000ff',
+    '#ffff00', '#00ffff', '#ff00ff', '#ff9900', '#9900ff',
+    '#ff69b4', '#32cd32', '#8b4513', '#4169e1', '#ffa07a'
+];
+
+const colorPalette = document.getElementById('color-palette');
+colors.forEach(color => {
+    const colorBtn = document.createElement('button');
+    colorBtn.className = 'color-btn';
+    colorBtn.style.backgroundColor = color;
+    colorBtn.addEventListener('click', () => {
+        currentColor = color;
+        document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('active'));
+        colorBtn.classList.add('active');
+    });
+    colorPalette.appendChild(colorBtn);
+});
+
+// Boyut butonları
+document.querySelectorAll('.size-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        brushSize = parseInt(btn.dataset.size);
+        document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    });
+});
+
+// Temizle butonu
+document.getElementById('clear-btn').addEventListener('click', () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    shapes = [];
+});
+
+// Kaydet butonu
 document.getElementById('save-btn').addEventListener('click', () => {
     const link = document.createElement('a');
-    link.download = 'cizim.png';
+    link.download = 'boyama.png';
     link.href = canvas.toDataURL();
     link.click();
 });
 
+// Resim yükleme
 const fileInput = document.getElementById('file-input');
 fileInput.addEventListener('change', function(e) {
     const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            const img = new Image();
-            img.onload = function() {
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            };
-            img.src = event.target.result;
-        };
-        reader.readAsDataURL(file);
-    }
-});
-
-// Mobil menü kontrolü
-const toggleSidebar = document.getElementById('toggle-sidebar');
-const sidebar = document.getElementById('sidebar');
-
-toggleSidebar.addEventListener('click', () => {
-    sidebar.classList.toggle('show');
-});
-
-document.addEventListener('click', (e) => {
-    if (sidebar.classList.contains('show') &&
-        !sidebar.contains(e.target) &&
-        !toggleSidebar.contains(e.target)) {
-        sidebar.classList.remove('show');
-    }
-});
-
-// Parti efekti
-document.getElementById('party-btn').addEventListener('click', () => {
-    const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
-    let colorIndex = 0;
+    const reader = new FileReader();
     
-    function confetti() {
-        const x = Math.random() * canvas.width;
-        const y = Math.random() * canvas.height;
-        const size = Math.random() * 10 + 5;
-        
-        ctx.fillStyle = colors[colorIndex];
-        ctx.beginPath();
-        ctx.arc(x, y, size, 0, Math.PI * 2);
-        ctx.fill();
-        
-        colorIndex = (colorIndex + 1) % colors.length;
-    }
-    
-    let count = 0;
-    const interval = setInterval(() => {
-        confetti();
-        count++;
-        if (count >= 100) clearInterval(interval);
-    }, 50);
-});
-
-// Resim değişkenleri
-const REPO_OWNER = 'showman1907';
-const REPO_NAME = 'duck';
-const IMAGE_PATH = 'images';
-let currentImageIndex = 0;
-let images = [];
-
-// GitHub'dan resimleri çek
-async function fetchImagesFromGitHub() {
-    try {
-        const response = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${IMAGE_PATH}`);
-        const data = await response.json();
-        
-        // Sadece resim dosyalarını filtrele
-        images = data.filter(file => 
-            file.name.match(/\.(jpg|jpeg|png|gif)$/i)
-        ).map(file => file.download_url);
-        
-        if (images.length > 0) {
-            loadAndDrawImage(0);
-        }
-    } catch (error) {
-        console.error('Resimler yüklenemedi:', error);
-    }
-}
-
-// Resmi yükle ve çiz
-function loadAndDrawImage(index) {
-    if (index >= 0 && index < images.length) {
+    reader.onload = function(event) {
         const img = new Image();
-        img.crossOrigin = "anonymous";
         img.onload = function() {
-            // Canvas'ı temizle
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Resmi ortala ve boyutlandır
-            const scale = Math.min(
-                (canvas.width * 0.8) / img.width,
-                (canvas.height * 0.8) / img.height
-            );
-            
-            const x = (canvas.width - img.width * scale) / 2;
-            const y = (canvas.height - img.height * scale) / 2;
-            
-            ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
-            currentImageIndex = index;
-            updateImageButtons();
-        };
-        img.src = images[index];
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        }
+        img.src = event.target.result;
     }
-}
-
-// Resim değiştirme butonlarını güncelle
-function updateImageButtons() {
-    const prevBtn = document.getElementById('prev-image');
-    const nextBtn = document.getElementById('next-image');
-    
-    if (prevBtn && nextBtn) {
-        prevBtn.disabled = currentImageIndex <= 0;
-        nextBtn.disabled = currentImageIndex >= images.length - 1;
-    }
-}
-
-// Resim değiştirme fonksiyonları
-function changeImage(direction) {
-    let newIndex;
-    if (direction === 'next' && currentImageIndex < images.length - 1) {
-        newIndex = currentImageIndex + 1;
-    } else if (direction === 'prev' && currentImageIndex > 0) {
-        newIndex = currentImageIndex - 1;
-    } else {
-        return;
-    }
-    loadAndDrawImage(newIndex);
-}
-
-document.getElementById('prev-image').addEventListener('click', () => {
-    changeImage('prev');
+    reader.readAsDataURL(file);
 });
 
-document.getElementById('next-image').addEventListener('click', () => {
-    changeImage('next');
-});
+// Sayfa yüklendiğinde ve pencere boyutu değiştiğinde canvas'ı yeniden boyutlandır
+window.addEventListener('load', resizeCanvas);
+window.addEventListener('resize', resizeCanvas);
 
-// Başlangıç
-resizeCanvas();
-createColorPalette();
-updateBrushStyle();
-fetchImagesFromGitHub();
+// Sidebar toggle
+document.getElementById('toggle-sidebar').addEventListener('click', function() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('collapsed');
+    this.classList.toggle('collapsed');
+});
