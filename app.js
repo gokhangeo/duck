@@ -9,7 +9,154 @@ let currentColor = '#000000';
 let currentSize = 10;
 let lastX = 0;
 let lastY = 0;
+let hue = 0;
+let direction = true;
+let isResizing = false;
+let selectedShape = null;
+let shapes = [];
 const isTouchDevice = 'ontouchstart' in window;
+
+// Şekil sınıfı
+class Shape {
+    constructor(type, x, y, size, color) {
+        this.type = type;
+        this.x = x;
+        this.y = y;
+        this.size = size;
+        this.color = color;
+        this.isSelected = false;
+    }
+
+    draw() {
+        ctx.save();
+        ctx.fillStyle = this.color;
+        ctx.strokeStyle = this.isSelected ? '#00ff00' : this.color;
+        ctx.lineWidth = 2;
+
+        switch(this.type) {
+            case 'circle':
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+            case 'square':
+                ctx.fillRect(this.x - this.size, this.y - this.size, this.size * 2, this.size * 2);
+                break;
+            case 'triangle':
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y - this.size);
+                ctx.lineTo(this.x - this.size, this.y + this.size);
+                ctx.lineTo(this.x + this.size, this.y + this.size);
+                ctx.closePath();
+                ctx.fill();
+                break;
+            case 'star':
+                this.drawStar();
+                break;
+            case 'heart':
+                this.drawHeart();
+                break;
+        }
+
+        if (this.isSelected) {
+            ctx.strokeRect(this.x - this.size - 5, this.y - this.size - 5, 
+                          (this.size + 5) * 2, (this.size + 5) * 2);
+        }
+        ctx.restore();
+    }
+
+    drawStar() {
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+            ctx.lineTo(Math.cos((18 + i * 72) * Math.PI / 180) * this.size + this.x,
+                      Math.sin((18 + i * 72) * Math.PI / 180) * this.size + this.y);
+            ctx.lineTo(Math.cos((54 + i * 72) * Math.PI / 180) * (this.size/2) + this.x,
+                      Math.sin((54 + i * 72) * Math.PI / 180) * (this.size/2) + this.y);
+        }
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    drawHeart() {
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y + this.size * 0.7);
+        ctx.bezierCurveTo(this.x, this.y + this.size * 0.7, 
+                         this.x - this.size, this.y + this.size * 0.4,
+                         this.x - this.size, this.y);
+        ctx.bezierCurveTo(this.x - this.size, this.y - this.size * 0.8,
+                         this.x, this.y - this.size * 0.8,
+                         this.x, this.y);
+        ctx.bezierCurveTo(this.x, this.y - this.size * 0.8,
+                         this.x + this.size, this.y - this.size * 0.8,
+                         this.x + this.size, this.y);
+        ctx.bezierCurveTo(this.x + this.size, this.y + this.size * 0.4,
+                         this.x, this.y + this.size * 0.7,
+                         this.x, this.y + this.size * 0.7);
+        ctx.fill();
+    }
+
+    contains(x, y) {
+        const distance = Math.sqrt((x - this.x) ** 2 + (y - this.y) ** 2);
+        return distance <= this.size;
+    }
+}
+
+// Parti efektleri
+function drawRainbow(e) {
+    ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(e.offsetX, e.offsetY);
+    ctx.stroke();
+    [lastX, lastY] = [e.offsetX, e.offsetY];
+    
+    hue++;
+    if (hue >= 360) hue = 0;
+    
+    if (ctx.lineWidth >= 50 || ctx.lineWidth <= 5) {
+        direction = !direction;
+    }
+    
+    if (direction) {
+        ctx.lineWidth++;
+    } else {
+        ctx.lineWidth--;
+    }
+}
+
+function drawSparkle(e) {
+    const size = Math.random() * 10 + 5;
+    const angle = Math.random() * Math.PI * 2;
+    const colors = ['#FFD700', '#FFA500', '#FF69B4', '#00FF00', '#4169E1'];
+    
+    ctx.save();
+    ctx.translate(e.offsetX, e.offsetY);
+    ctx.rotate(angle);
+    ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+    
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+        ctx.lineTo(Math.cos((18 + i * 72) * Math.PI / 180) * size,
+                  Math.sin((18 + i * 72) * Math.PI / 180) * size);
+        ctx.lineTo(Math.cos((54 + i * 72) * Math.PI / 180) * (size/2),
+                  Math.sin((54 + i * 72) * Math.PI / 180) * (size/2));
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+}
+
+function drawConfetti(e) {
+    const colors = ['#FF69B4', '#4169E1', '#FFD700', '#32CD32', '#FF4500'];
+    const size = Math.random() * 10 + 5;
+    
+    for (let i = 0; i < 5; i++) {
+        const x = e.offsetX + (Math.random() - 0.5) * 50;
+        const y = e.offsetY + (Math.random() - 0.5) * 50;
+        ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+        ctx.fillRect(x, y, size, size);
+    }
+}
 
 // Canvas boyutlandırma
 function resizeCanvas() {
@@ -205,10 +352,34 @@ function hexToRgb(hex) {
 
 // Dosya işlemleri
 document.getElementById('clear-btn').addEventListener('click', () => {
-    if (confirm('Tüm çizimi silmek istediğinizden emin misiniz?')) {
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        updateBrushStyle();
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+    
+    // Mevcut resmi geçici canvas'a kopyala
+    tempCtx.drawImage(canvas, 0, 0);
+    
+    // Ana canvas'ı temizle
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Geçici canvas'tan sadece resmi geri kopyala
+    if (currentImageIndex >= 0 && currentImageIndex < images.length) {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = function() {
+            const scale = Math.min(
+                (canvas.width * 0.8) / img.width,
+                (canvas.height * 0.8) / img.height
+            );
+            
+            const x = (canvas.width - img.width * scale) / 2;
+            const y = (canvas.height - img.height * scale) / 2;
+            
+            ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+        };
+        img.src = images[currentImageIndex];
     }
 });
 
@@ -276,6 +447,135 @@ document.getElementById('party-btn').addEventListener('click', () => {
         if (count >= 100) clearInterval(interval);
     }, 50);
 });
+
+// Şekil butonları
+document.querySelectorAll('[id^="shape-"]').forEach(button => {
+    button.addEventListener('click', () => {
+        const shapeType = button.id.replace('shape-', '');
+        currentTool = 'shape';
+        selectedShape = shapeType;
+        
+        // Diğer butonların active sınıfını kaldır
+        document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+    });
+});
+
+// Parti efekt butonları
+document.getElementById('party-rainbow').addEventListener('click', () => {
+    currentTool = 'rainbow';
+    document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('party-rainbow').classList.add('active');
+});
+
+document.getElementById('party-sparkle').addEventListener('click', () => {
+    currentTool = 'sparkle';
+    document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('party-sparkle').classList.add('active');
+});
+
+document.getElementById('party-confetti').addEventListener('click', () => {
+    currentTool = 'confetti';
+    document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('party-confetti').classList.add('active');
+});
+
+// Canvas olayları
+canvas.addEventListener('mousedown', startDrawing);
+canvas.addEventListener('mousemove', draw);
+canvas.addEventListener('mouseup', stopDrawing);
+canvas.addEventListener('mouseout', stopDrawing);
+
+function startDrawing(e) {
+    isDrawing = true;
+    [lastX, lastY] = [e.offsetX, e.offsetY];
+    
+    if (currentTool === 'shape') {
+        const shape = new Shape(selectedShape, e.offsetX, e.offsetY, currentSize, currentColor);
+        shapes.push(shape);
+        redrawCanvas();
+    }
+}
+
+function draw(e) {
+    if (!isDrawing) return;
+
+    switch(currentTool) {
+        case 'brush':
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.stroke();
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+            break;
+            
+        case 'eraser':
+            ctx.save();
+            ctx.strokeStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.stroke();
+            ctx.restore();
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+            break;
+            
+        case 'rainbow':
+            drawRainbow(e);
+            break;
+            
+        case 'sparkle':
+            drawSparkle(e);
+            break;
+            
+        case 'confetti':
+            drawConfetti(e);
+            break;
+            
+        case 'shape':
+            const lastShape = shapes[shapes.length - 1];
+            if (lastShape) {
+                lastShape.size = Math.max(Math.abs(e.offsetX - lastShape.x), 
+                                       Math.abs(e.offsetY - lastShape.y));
+                redrawCanvas();
+            }
+            break;
+    }
+}
+
+function stopDrawing() {
+    isDrawing = false;
+}
+
+function redrawCanvas() {
+    // Canvas'ı temizle
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Mevcut resmi çiz
+    if (currentImageIndex >= 0 && currentImageIndex < images.length) {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = function() {
+            const scale = Math.min(
+                (canvas.width * 0.8) / img.width,
+                (canvas.height * 0.8) / img.height
+            );
+            
+            const x = (canvas.width - img.width * scale) / 2;
+            const y = (canvas.height - img.height * scale) / 2;
+            
+            ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+            
+            // Tüm şekilleri tekrar çiz
+            shapes.forEach(shape => shape.draw());
+        };
+        img.src = images[currentImageIndex];
+    } else {
+        // Sadece şekilleri çiz
+        shapes.forEach(shape => shape.draw());
+    }
+}
 
 // Resim değişkenleri
 const REPO_OWNER = 'showman1907';
