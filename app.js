@@ -76,7 +76,9 @@ function setTool(tool) {
 
 function setShape(shape) {
     currentShapeType = shape;
-    setTool('shape');
+    currentTool = 'shape';
+    document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`shape-${shape}`).classList.add('active');
 }
 
 function startDrawing(e) {
@@ -121,6 +123,7 @@ function draw(e) {
 }
 
 function stopDrawing() {
+    if (!isDrawing) return;
     isDrawing = false;
     
     if (currentTool === 'shape' && isDrawingShape) {
@@ -178,7 +181,7 @@ function drawShape(type, x, y, width, height) {
             ctx.closePath();
             break;
         case 'star':
-            drawStar(x + width/2, y + height/2, 5, width/2, height/4);
+            drawStar(x + width/2, y + height/2, 5, Math.abs(width/2), Math.abs(height/4));
             break;
         case 'heart':
             drawHeart(x, y, width, height);
@@ -400,19 +403,7 @@ document.querySelectorAll('.size-btn').forEach(btn => {
 
 // Temizle butonu
 document.getElementById('clear-btn').addEventListener('click', () => {
-    // Geçici canvas oluştur
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = canvas.width;
-    tempCanvas.height = canvas.height;
-    const tempCtx = tempCanvas.getContext('2d');
-
-    // Mevcut canvas içeriğini geçici canvas'a kopyala
-    tempCtx.drawImage(canvas, 0, 0);
-
-    // Ana canvas'ı temizle
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Şekilleri sıfırla
     shapes = [];
 });
 
@@ -449,4 +440,10 @@ document.getElementById('toggle-sidebar').addEventListener('click', function() {
     const sidebar = document.getElementById('sidebar');
     sidebar.classList.toggle('collapsed');
     this.classList.toggle('collapsed');
+});
+
+// Mobil menü
+document.getElementById('toggle-sidebar').addEventListener('click', function() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('show');
 });
