@@ -3,14 +3,17 @@ const ctx = canvas.getContext('2d');
 
 // Temel değişkenler
 let isDrawing = false;
+let lastX = 0;
+let lastY = 0;
 let currentColor = '#000000';
 let currentSize = 10;
 let currentTool = 'brush';
 
 // Canvas boyutunu ayarla
 function resizeCanvas() {
-    canvas.width = canvas.parentElement.clientWidth - 40;
-    canvas.height = window.innerHeight - 100;
+    const container = canvas.parentElement;
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
     drawImage();
 }
 
@@ -89,8 +92,8 @@ function changeImage(direction) {
 function startDrawing(e) {
     isDrawing = true;
     const pos = getMousePos(e);
-    ctx.beginPath();
-    ctx.moveTo(pos.x, pos.y);
+    lastX = pos.x;
+    lastY = pos.y;
     
     if (currentTool === 'fill') {
         floodFill(pos.x, pos.y);
@@ -99,22 +102,28 @@ function startDrawing(e) {
 
 function draw(e) {
     if (!isDrawing) return;
+    e.preventDefault();
+    
     const pos = getMousePos(e);
     
     if (currentTool === 'eraser') {
         erase(pos.x, pos.y);
     } else if (currentTool === 'brush') {
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
         ctx.lineTo(pos.x, pos.y);
         ctx.strokeStyle = currentColor;
         ctx.lineWidth = currentSize;
         ctx.lineCap = 'round';
         ctx.stroke();
     }
+    
+    lastX = pos.x;
+    lastY = pos.y;
 }
 
 function stopDrawing() {
     isDrawing = false;
-    ctx.beginPath();
 }
 
 // Silgi fonksiyonu
@@ -189,10 +198,9 @@ function floodFill(startX, startY) {
 // Yardımcı fonksiyonlar
 function getMousePos(e) {
     const rect = canvas.getBoundingClientRect();
-    return {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top
-    };
+    const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+    return { x, y };
 }
 
 function updateToolButtons() {
@@ -218,10 +226,17 @@ function updateToolButtons() {
 // Event Listeners
 window.addEventListener('resize', resizeCanvas);
 
+// Mouse Events
 canvas.addEventListener('mousedown', startDrawing);
 canvas.addEventListener('mousemove', draw);
 canvas.addEventListener('mouseup', stopDrawing);
 canvas.addEventListener('mouseout', stopDrawing);
+
+// Touch Events
+canvas.addEventListener('touchstart', startDrawing, { passive: false });
+canvas.addEventListener('touchmove', draw, { passive: false });
+canvas.addEventListener('touchend', stopDrawing);
+canvas.addEventListener('touchcancel', stopDrawing);
 
 document.getElementById('brush-tool').addEventListener('click', () => {
     currentTool = 'brush';
