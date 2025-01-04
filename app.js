@@ -12,7 +12,7 @@ let isDragging = false;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
 
-const images = ['/images/duck1.png', '/images/duck2.png', '/images/duck3.png'];
+const images = ['/images/duck1.png', '/images/duck2.png', '/images/duck3.png', '/images/noel.png'];
 const loadedImages = [];
 
 // Canvas boyutunu ayarla
@@ -387,15 +387,153 @@ document.getElementById('clear-btn').addEventListener('click', () => {
     drawImage();
 });
 
-// Sonraki resim
-document.getElementById('next-btn').addEventListener('click', () => {
-    currentImageIndex = (currentImageIndex + 1) % images.length;
+// Resim değiştirme kontrolleri
+let currentImageIndex = 0;
+const images = ['/images/duck1.png', '/images/duck2.png', '/images/duck3.png', '/images/noel.png'];
+const loadedImages = [];
+
+function changeImage(direction) {
+    if (direction === 'next') {
+        currentImageIndex = (currentImageIndex + 1) % images.length;
+    } else {
+        currentImageIndex = (currentImageIndex - 1 + images.length) % images.length;
+    }
     drawImage();
     redrawShapes();
+}
+
+// Gelişmiş otomatik boyama fonksiyonu
+function floodFill(startX, startY, fillColor) {
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const pixels = imageData.data;
+    
+    const startPos = (startY * canvas.width + startX) * 4;
+    const startR = pixels[startPos];
+    const startG = pixels[startPos + 1];
+    const startB = pixels[startPos + 2];
+    const startA = pixels[startPos + 3];
+    
+    // Renk toleransı
+    const tolerance = 30;
+    
+    function matchesStart(pos) {
+        return Math.abs(pixels[pos] - startR) <= tolerance &&
+               Math.abs(pixels[pos + 1] - startG) <= tolerance &&
+               Math.abs(pixels[pos + 2] - startB) <= tolerance &&
+               Math.abs(pixels[pos + 3] - startA) <= tolerance;
+    }
+    
+    function isEdge(pos) {
+        const x = (pos / 4) % canvas.width;
+        const y = Math.floor((pos / 4) / canvas.width);
+        
+        // Kenar piksellerini kontrol et
+        const neighbors = [
+            [(x-1), y], [x+1, y], [x, y-1], [x, y+1]
+        ];
+        
+        for (let [nx, ny] of neighbors) {
+            if (nx < 0 || nx >= canvas.width || ny < 0 || ny >= canvas.height) continue;
+            const npos = (ny * canvas.width + nx) * 4;
+            if (!matchesStart(npos)) return true;
+        }
+        return false;
+    }
+
+    const stack = [[startX, startY]];
+    const filledPositions = new Set();
+    const edgePositions = new Set();
+    
+    while (stack.length > 0) {
+        const [x, y] = stack.pop();
+        const pos = (y * canvas.width + x) * 4;
+        
+        if (x < 0 || x >= canvas.width || y < 0 || y >= canvas.height || 
+            filledPositions.has(`${x},${y}`) || !matchesStart(pos)) {
+            continue;
+        }
+        
+        filledPositions.add(`${x},${y}`);
+        
+        if (isEdge(pos)) {
+            edgePositions.add(`${x},${y}`);
+            continue;
+        }
+        
+        // Rengi değiştir
+        pixels[pos] = fillColor.r;
+        pixels[pos + 1] = fillColor.g;
+        pixels[pos + 2] = fillColor.b;
+        pixels[pos + 3] = 255;
+        
+        stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+    }
+    
+    // Kenarları koru
+    edgePositions.forEach(pos => {
+        const [x, y] = pos.split(',').map(Number);
+        const pixelPos = (y * canvas.width + x) * 4;
+        pixels[pixelPos] = startR;
+        pixels[pixelPos + 1] = startG;
+        pixels[pixelPos + 2] = startB;
+        pixels[pixelPos + 3] = startA;
+    });
+    
+    ctx.putImageData(imageData, 0, 0);
+}
+
+// Silgi boyutları ve kontrolü
+const eraserSizes = [5, 10, 20, 30, 50];
+let currentEraserSize = eraserSizes[0];
+
+function setEraserSize(size) {
+    currentEraserSize = size;
+    currentShape = 'eraser';
+    updateEraserCursor();
+}
+
+function updateEraserCursor() {
+    const cursorSize = currentEraserSize * 2;
+    canvas.style.cursor = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="${cursorSize}" height="${cursorSize}" viewBox="0 0 ${cursorSize} ${cursorSize}"><circle cx="${cursorSize/2}" cy="${cursorSize/2}" r="${cursorSize/2-1}" fill="none" stroke="black" stroke-width="1"/></svg>') ${cursorSize/2} ${cursorSize/2}, auto`;
+}
+
+// Eraser işlevi
+function erase(x, y) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, currentEraserSize, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.clearRect(x - currentEraserSize, y - currentEraserSize, 
+                 currentEraserSize * 2, currentEraserSize * 2);
+    ctx.restore();
+}
+
+// Event listener'ları güncelle
+canvas.addEventListener('mousemove', function(e) {
+    if (isDrawing) {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        if (currentShape === 'eraser') {
+            erase(x, y);
+        } else {
+            draw(e);
+        }
+    }
 });
 
-// Balon partisi butonu
-document.getElementById('party-btn').addEventListener('click', startParty);
+// Resim değiştirme butonları için event listener'lar
+document.getElementById('prev-image').addEventListener('click', () => changeImage('prev'));
+document.getElementById('next-image').addEventListener('click', () => changeImage('next'));
+
+// Silgi boyutları için event listener'lar
+eraserSizes.forEach(size => {
+    const btn = document.createElement('button');
+    btn.textContent = `${size}px`;
+    btn.onclick = () => setEraserSize(size);
+    document.getElementById('eraser-sizes').appendChild(btn);
+});
 
 // Yeni renk paleti
 const colorPalette = [
@@ -486,49 +624,6 @@ function addText(text, x, y) {
     });
 }
 
-// Silgi boyutları
-const eraserSizes = [10, 20, 30, 50];
-let currentEraserSize = eraserSizes[0];
-
-// Otomatik boyama fonksiyonu
-function floodFill(startX, startY, fillColor) {
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const pixels = imageData.data;
-    
-    const startPos = (startY * canvas.width + startX) * 4;
-    const startR = pixels[startPos];
-    const startG = pixels[startPos + 1];
-    const startB = pixels[startPos + 2];
-    const startA = pixels[startPos + 3];
-
-    function matchesStart(pos) {
-        return pixels[pos] === startR &&
-               pixels[pos + 1] === startG &&
-               pixels[pos + 2] === startB &&
-               pixels[pos + 3] === startA;
-    }
-
-    const queue = [[startX, startY]];
-    while (queue.length > 0) {
-        const [x, y] = queue.pop();
-        const pos = (y * canvas.width + x) * 4;
-
-        if (x < 0 || x >= canvas.width || y < 0 || y >= canvas.height || !matchesStart(pos)) {
-            continue;
-        }
-
-        // Rengi değiştir
-        pixels[pos] = fillColor.r;
-        pixels[pos + 1] = fillColor.g;
-        pixels[pos + 2] = fillColor.b;
-        pixels[pos + 3] = 255;
-
-        queue.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
-    }
-
-    ctx.putImageData(imageData, 0, 0);
-}
-
 // Başlangıç
 resizeCanvas();
 preloadImages();
@@ -564,7 +659,7 @@ document.getElementById('add-text-btn').addEventListener('click', () => {
 // Silgi boyutu seçimi
 eraserSizes.forEach(size => {
     const btn = document.createElement('button');
-    btn.textContent = size;
+    btn.textContent = `${size}px`;
     btn.addEventListener('click', () => {
         currentEraserSize = size;
     });
