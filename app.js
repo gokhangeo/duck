@@ -15,6 +15,78 @@ let partyMode = false;
 let partyHue = 0;
 let partyInterval = null;
 let backgroundImage = null;
+let rainbowMode = false;
+let rainbowIndex = 0;
+
+// Renk paleti
+const colors = [
+    '#000000', '#FFFFFF', '#FF0000', '#00FF00', '#0000FF',
+    '#FFFF00', '#FF00FF', '#00FFFF', '#FFA500', '#800080',
+    '#FFC0CB', '#A52A2A', '#008000', '#808080', '#FFD700',
+    '#E6E6FA', '#FF4500', '#32CD32', '#4169E1', '#FF69B4'
+];
+
+// GitHub resim galerisi
+const images = [
+    'image1.jpg',
+    'image2.jpg',
+    'image3.jpg',
+    // Diğer resimler...
+];
+
+let currentImageIndex = 0;
+
+// Resim kontrolü
+async function loadGitHubImages() {
+    try {
+        const username = 'showman1907';
+        const repo = 'duck';
+        const path = 'images';
+        const response = await fetch(`https://api.github.com/repos/${username}/${repo}/contents/${path}`);
+        const data = await response.json();
+        return data.filter(file => file.type === 'file' && file.name.match(/\.(jpg|jpeg|png|gif)$/i))
+                   .map(file => file.download_url);
+    } catch (error) {
+        console.error('GitHub resimlerini yüklerken hata:', error);
+        return [];
+    }
+}
+
+document.getElementById('prev-image').addEventListener('click', async () => {
+    const images = await loadGitHubImages();
+    if (images.length === 0) return;
+    
+    currentImageIndex = (currentImageIndex - 1 + images.length) % images.length;
+    loadBackgroundImage(images[currentImageIndex]);
+});
+
+document.getElementById('next-image').addEventListener('click', async () => {
+    const images = await loadGitHubImages();
+    if (images.length === 0) return;
+    
+    currentImageIndex = (currentImageIndex + 1) % images.length;
+    loadBackgroundImage(images[currentImageIndex]);
+});
+
+// Sayfa yüklendiğinde ilk resmi yükle
+window.addEventListener('load', async () => {
+    const images = await loadGitHubImages();
+    if (images.length > 0) {
+        loadBackgroundImage(images[0]);
+    }
+});
+
+function loadBackgroundImage(url) {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+        const canvas = document.getElementById('drawing-canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    };
+    img.src = url;
+}
 
 // Canvas boyutunu ayarla
 function resizeCanvas() {
@@ -45,6 +117,7 @@ document.getElementById('rect-tool').addEventListener('click', () => setTool('re
 document.getElementById('circle-tool').addEventListener('click', () => setTool('circle'));
 document.getElementById('triangle-tool').addEventListener('click', () => setTool('triangle'));
 document.getElementById('line-tool').addEventListener('click', () => setTool('line'));
+document.getElementById('rainbow-tool').addEventListener('click', () => setTool('rainbow'));
 
 function setTool(tool) {
     if (currentTool === 'party') {
@@ -53,6 +126,11 @@ function setTool(tool) {
     currentTool = tool;
     if (tool === 'party') {
         startPartyMode();
+    }
+    if (tool === 'rainbow') {
+        rainbowMode = true;
+    } else {
+        rainbowMode = false;
     }
     document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
     document.getElementById(`${tool}-tool`).classList.add('active');
@@ -125,6 +203,8 @@ function draw(e) {
             ctx.strokeStyle = `hsl(${partyHue}, 100%, 50%)`;
             ctx.shadowBlur = 10;
             ctx.shadowColor = `hsl(${(partyHue + 180) % 360}, 100%, 50%)`;
+        } else if (rainbowMode) {
+            ctx.strokeStyle = getRainbowColor();
         } else {
             ctx.strokeStyle = currentTool === 'eraser' ? '#ffffff' : currentColor;
             ctx.shadowBlur = 0;
@@ -138,6 +218,11 @@ function draw(e) {
 
     lastX = x;
     lastY = y;
+}
+
+function getRainbowColor() {
+    rainbowIndex = (rainbowIndex + 1) % colors.length;
+    return colors[rainbowIndex];
 }
 
 function drawShape(context, shape, startX, startY, endX, endY) {
@@ -228,13 +313,6 @@ function handleTouchEnd(e) {
 }
 
 // Renk paletini oluştur
-const colors = [
-    '#000000', '#ffffff', '#ff0000', '#00ff00', '#0000ff',
-    '#ffff00', '#00ffff', '#ff00ff', '#ff9900', '#9900ff',
-    '#ff69b4', '#32cd32', '#8b4513', '#4169e1', '#ffa07a'
-];
-
-const colorPalette = document.getElementById('color-palette');
 colors.forEach(color => {
     const colorBtn = document.createElement('button');
     colorBtn.className = 'color-btn';
@@ -247,6 +325,7 @@ colors.forEach(color => {
             stopPartyMode();
             setTool('brush');
         }
+        rainbowMode = false;
     });
     colorPalette.appendChild(colorBtn);
 });
@@ -281,6 +360,7 @@ document.getElementById('clear-btn').addEventListener('click', () => {
         stopPartyMode();
         setTool('brush');
     }
+    rainbowMode = false;
 });
 
 // Kaydet butonu
