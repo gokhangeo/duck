@@ -30,23 +30,37 @@
 
         #sidebar {
             width: 0;
-            background-color: rgba(0, 0, 0, 0.9);
+            background-color: rgba(80, 80, 80, 0.85);
+            backdrop-filter: blur(10px);
             padding: 0;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 10px;
             transition: all 0.3s ease;
             z-index: 1000;
             position: fixed;
             right: 0;
             top: 0;
-            bottom: 0;
-            overflow: hidden;
-            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.3);
+            height: 100vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        #sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #sidebar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        #sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
         }
 
         #sidebar.expanded {
-            width: 250px;
+            width: 220px;
             padding: 15px;
         }
 
@@ -54,10 +68,17 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding-bottom: 15px;
+            padding-bottom: 12px;
             width: 100%;
+            min-height: fit-content;
+        }
+
+        .tool-group:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+            margin-bottom: 15px;
         }
 
         .tool-btn {
@@ -81,7 +102,7 @@
         }
 
         .tool-btn.active {
-            background-color: rgba(255, 255, 255, 0.3);
+            background-color: rgba(255, 255, 255, 0.25);
             box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
         }
 
@@ -89,29 +110,32 @@
             color: #fff;
             font-size: 14px;
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             text-transform: uppercase;
             letter-spacing: 1px;
             width: 100%;
+            opacity: 0.9;
         }
 
         #color-palette {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
+            gap: 6px;
             padding: 8px;
             background-color: rgba(255, 255, 255, 0.05);
             border-radius: 8px;
             width: 100%;
+            min-height: fit-content;
         }
 
         .color-btn {
-            width: 30px;
-            height: 30px;
+            width: 35px;
+            height: 35px;
             border: 2px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
             cursor: pointer;
             transition: all 0.2s ease;
+            position: relative;
         }
 
         .color-btn:hover {
@@ -146,7 +170,7 @@
         }
 
         .size-btn.active {
-            background-color: rgba(255, 255, 255, 0.3);
+            background-color: rgba(255, 255, 255, 0.25);
             box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
         }
 
@@ -158,7 +182,8 @@
             height: 40px;
             border: none;
             border-radius: 8px;
-            background-color: rgba(0, 0, 0, 0.9);
+            background-color: rgba(80, 80, 80, 0.85);
+            backdrop-filter: blur(10px);
             color: #fff;
             cursor: pointer;
             display: flex;
@@ -170,12 +195,12 @@
         }
 
         #toggle-sidebar:hover {
-            background-color: rgba(0, 0, 0, 1);
+            background-color: rgba(100, 100, 100, 0.9);
             transform: scale(1.1);
         }
 
         #toggle-sidebar.expanded {
-            right: 270px;
+            right: 240px;
         }
 
         #image-controls {
@@ -192,7 +217,8 @@
             height: 40px;
             border: none;
             border-radius: 8px;
-            background-color: rgba(0, 0, 0, 0.9);
+            background-color: rgba(80, 80, 80, 0.85);
+            backdrop-filter: blur(10px);
             color: #fff;
             cursor: pointer;
             display: flex;
@@ -203,7 +229,7 @@
         }
 
         .image-btn:hover {
-            background-color: rgba(0, 0, 0, 1);
+            background-color: rgba(100, 100, 100, 0.9);
             transform: scale(1.1);
         }
 
@@ -227,8 +253,6 @@
             #sidebar {
                 width: 0;
                 height: 100%;
-                right: 0;
-                top: 0;
             }
 
             #sidebar.expanded {
@@ -240,11 +264,17 @@
             }
 
             .tool-group {
-                align-items: center;
+                padding: 10px 0;
             }
 
             #color-palette {
                 grid-template-columns: repeat(5, 1fr);
+                gap: 8px;
+            }
+
+            .color-btn {
+                width: 40px;
+                height: 40px;
             }
         }
     </style>
