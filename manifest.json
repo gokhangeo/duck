@@ -1,16 +1,24 @@
 {
-    "name": "Paper Duck Boyama",
-    "short_name": "Boyama",
-    "start_url": "index.html",
+    "name": "Gizem Elgül Boyama Defteri",
+    "short_name": "Gizem Boyama",
+    "description": "Eğlenceli boyama uygulaması",
+    "start_url": "/",
     "display": "standalone",
     "background_color": "#ffffff",
-    "theme_color": "#ffffff",
-    "orientation": "any",
+    "theme_color": "#FF69B4",
     "icons": [
         {
-            "src": "icon.png",
+            "src": "images/icon-192x192.png",
             "sizes": "192x192",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "images/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
         }
-    ]
-} 
+    ],
+    "orientation": "any"
+}

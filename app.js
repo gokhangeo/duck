@@ -365,6 +365,139 @@ document.getElementById('party-btn').addEventListener('click', () => {
     }
 });
 
+// PWA Kurulumu
+let deferredPrompt;
+const installPrompt = document.querySelector('.install-prompt');
+const installButton = document.querySelector('.install-btn');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installPrompt.classList.add('show');
+});
+
+installButton.addEventListener('click', async () => {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            console.log('Uygulama kuruldu');
+        }
+        deferredPrompt = null;
+        installPrompt.classList.remove('show');
+    }
+});
+
+// Service Worker Kaydı
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js')
+            .then(registration => {
+                console.log('ServiceWorker başarıyla kaydedildi');
+            })
+            .catch(error => {
+                console.log('ServiceWorker kaydı başarısız:', error);
+            });
+    });
+}
+
+// Toolbar Genişletme
+const toolbar = document.getElementById('toolbar');
+const expandBtn = document.querySelector('.expand-btn');
+let isExpanded = false;
+
+expandBtn.addEventListener('click', () => {
+    isExpanded = !isExpanded;
+    toolbar.classList.toggle('expanded');
+    expandBtn.querySelector('i').classList.toggle('fa-chevron-up');
+    expandBtn.querySelector('i').classList.toggle('fa-chevron-down');
+});
+
+// Resim Yükleme
+const fileInput = document.getElementById('file-input');
+fileInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const img = new Image();
+            img.onload = function() {
+                const aspectRatio = img.width / img.height;
+                const maxWidth = canvas.width * 0.8;
+                const maxHeight = canvas.height * 0.8;
+                
+                let newWidth, newHeight;
+                if (img.width > img.height) {
+                    newWidth = maxWidth;
+                    newHeight = maxWidth / aspectRatio;
+                } else {
+                    newHeight = maxHeight;
+                    newWidth = maxHeight * aspectRatio;
+                }
+
+                const x = (canvas.width - newWidth) / 2;
+                const y = (canvas.height - newHeight) / 2;
+                
+                ctx.drawImage(img, x, y, newWidth, newHeight);
+            };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Otomatik Boyama Alanları
+const autoFillButtons = document.querySelectorAll('.auto-fill-btn');
+const areas = {
+    head: { x: 300, y: 200, radius: 80 },
+    body: { x: 300, y: 350, width: 160, height: 200 },
+    hat: { x: 300, y: 120, width: 100, height: 60 },
+    wings: { x: 400, y: 350, width: 60, height: 100 }
+};
+
+autoFillButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+        const area = btn.dataset.area;
+        const currentColor = document.querySelector('.color-btn.active').style.backgroundColor;
+        
+        if (area === 'head') {
+            ctx.beginPath();
+            ctx.fillStyle = currentColor;
+            ctx.arc(areas.head.x, areas.head.y, areas.head.radius, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (area === 'body') {
+            ctx.fillStyle = currentColor;
+            ctx.fillRect(
+                areas.body.x - areas.body.width/2,
+                areas.body.y - areas.body.height/2,
+                areas.body.width,
+                areas.body.height
+            );
+        } else if (area === 'hat') {
+            ctx.fillStyle = currentColor;
+            ctx.fillRect(
+                areas.hat.x - areas.hat.width/2,
+                areas.hat.y - areas.hat.height/2,
+                areas.hat.width,
+                areas.hat.height
+            );
+        } else if (area === 'wings') {
+            ctx.fillStyle = currentColor;
+            ctx.beginPath();
+            ctx.ellipse(
+                areas.wings.x,
+                areas.wings.y,
+                areas.wings.width/2,
+                areas.wings.height/2,
+                0,
+                0,
+                Math.PI * 2
+            );
+            ctx.fill();
+        }
+    });
+});
+
 // Başlangıç
 resizeCanvas();
 createColorPalette();
