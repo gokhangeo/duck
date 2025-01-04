@@ -137,61 +137,62 @@ function erase(x, y) {
 }
 
 // Otomatik boyama fonksiyonu
-function floodFill(startX, startY) {
+function floodFill(startX, startY, fillColor) {
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const pixels = imageData.data;
-    
+
+    // Başlangıç noktasının rengini al
     const startPos = (startY * canvas.width + startX) * 4;
     const startR = pixels[startPos];
     const startG = pixels[startPos + 1];
     const startB = pixels[startPos + 2];
     const startA = pixels[startPos + 3];
-    
-    const fillR = parseInt(currentColor.substr(1, 2), 16);
-    const fillG = parseInt(currentColor.substr(3, 2), 16);
-    const fillB = parseInt(currentColor.substr(5, 2), 16);
-    
+
+    // Yeni renk değerlerini al
+    const fillR = parseInt(fillColor.substr(1, 2), 16);
+    const fillG = parseInt(fillColor.substr(3, 2), 16);
+    const fillB = parseInt(fillColor.substr(5, 2), 16);
+
+    // Renk toleransı
     const tolerance = 30;
-    
-    function matchesStart(pos) {
+
+    function matchesStartColor(pos) {
         return Math.abs(pixels[pos] - startR) <= tolerance &&
                Math.abs(pixels[pos + 1] - startG) <= tolerance &&
                Math.abs(pixels[pos + 2] - startB) <= tolerance &&
                Math.abs(pixels[pos + 3] - startA) <= tolerance;
     }
-    
-    const stack = [[startX, startY]];
-    const visited = new Set();
-    
-    while (stack.length > 0) {
-        const [x, y] = stack.pop();
-        
-        if (x < 0 || x >= canvas.width || y < 0 || y >= canvas.height) {
-            continue;
-        }
-        
-        const pos = (y * canvas.width + x) * 4;
-        const key = `${x},${y}`;
-        
-        if (visited.has(key) || !matchesStart(pos)) {
-            continue;
-        }
-        
-        visited.add(key);
-        
+
+    function colorPixel(pos) {
         pixels[pos] = fillR;
         pixels[pos + 1] = fillG;
         pixels[pos + 2] = fillB;
         pixels[pos + 3] = 255;
-        
-        stack.push(
-            [x + 1, y],
-            [x - 1, y],
-            [x, y + 1],
-            [x, y - 1]
-        );
     }
-    
+
+    // Flood fill algoritması
+    const pixelsToCheck = [[startX, startY]];
+    const visited = new Set();
+
+    while (pixelsToCheck.length) {
+        const [x, y] = pixelsToCheck.pop();
+        const pos = (y * canvas.width + x) * 4;
+        const key = `${x},${y}`;
+
+        if (visited.has(key)) continue;
+        visited.add(key);
+
+        if (!matchesStartColor(pos)) continue;
+
+        colorPixel(pos);
+
+        // Komşu pikselleri kontrol et
+        if (x > 0) pixelsToCheck.push([x - 1, y]);
+        if (x < canvas.width - 1) pixelsToCheck.push([x + 1, y]);
+        if (y > 0) pixelsToCheck.push([x, y - 1]);
+        if (y < canvas.height - 1) pixelsToCheck.push([x, y + 1]);
+    }
+
     ctx.putImageData(imageData, 0, 0);
 }
 
@@ -496,6 +497,66 @@ autoFillButtons.forEach(btn => {
             ctx.fill();
         }
     });
+});
+
+// Mobil menü kontrolü
+const toggleSidebar = document.getElementById('toggle-sidebar');
+const sidebar = document.getElementById('sidebar');
+
+toggleSidebar.addEventListener('click', () => {
+    sidebar.classList.toggle('show');
+});
+
+// Canvas'ın dışına tıklandığında menüyü kapat
+document.addEventListener('click', (e) => {
+    if (window.innerWidth <= 768 && 
+        !sidebar.contains(e.target) && 
+        !toggleSidebar.contains(e.target) &&
+        sidebar.classList.contains('show')) {
+        sidebar.classList.remove('show');
+    }
+});
+
+// Renk dönüşüm yardımcısı
+function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
+}
+
+// RGB'den HEX'e dönüşüm
+function rgbToHex(rgb) {
+    const match = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+    if (!match) return rgb;
+    
+    function hex(x) {
+        return ("0" + parseInt(x).toString(16)).slice(-2);
+    }
+    
+    return "#" + hex(match[1]) + hex(match[2]) + hex(match[3]);
+}
+
+// Canvas tıklama olayını güncelle
+canvas.addEventListener(isTouchDevice ? 'touchstart' : 'mousedown', function(e) {
+    const rect = canvas.getBoundingClientRect();
+    const x = isTouchDevice ? 
+        e.touches[0].clientX - rect.left : 
+        e.clientX - rect.left;
+    const y = isTouchDevice ? 
+        e.touches[0].clientY - rect.top : 
+        e.clientY - rect.top;
+
+    if (currentTool === 'fill') {
+        const currentColor = document.querySelector('.color-btn.active').style.backgroundColor;
+        floodFill(Math.floor(x), Math.floor(y), rgbToHex(currentColor));
+    } else {
+        isDrawing = true;
+        lastX = x;
+        lastY = y;
+    }
 });
 
 // Başlangıç
