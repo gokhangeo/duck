@@ -14,6 +14,8 @@ function resizeCanvas() {
     const container = canvas.parentElement;
     canvas.width = container.clientWidth;
     canvas.height = container.clientHeight;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     drawImage();
 }
 
@@ -90,13 +92,21 @@ function changeImage(direction) {
 
 // Çizim fonksiyonları
 function startDrawing(e) {
-    isDrawing = true;
-    const pos = getMousePos(e);
-    lastX = pos.x;
-    lastY = pos.y;
+    e.preventDefault();
     
-    if (currentTool === 'fill') {
-        floodFill(pos.x, pos.y);
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    const x = Math.floor((isTouchDevice ? e.touches[0].clientX : e.clientX) - rect.left) * scaleX;
+    const y = Math.floor((isTouchDevice ? e.touches[0].clientY : e.clientY) - rect.top) * scaleY;
+
+    isDrawing = true;
+    lastX = x;
+    lastY = y;
+    if (currentTool === 'brush') {
+        ctx.beginPath();
+        ctx.moveTo(x, y);
     }
 }
 
@@ -104,22 +114,20 @@ function draw(e) {
     if (!isDrawing) return;
     e.preventDefault();
     
-    const pos = getMousePos(e);
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
     
-    if (currentTool === 'eraser') {
-        erase(pos.x, pos.y);
-    } else if (currentTool === 'brush') {
-        ctx.beginPath();
-        ctx.moveTo(lastX, lastY);
-        ctx.lineTo(pos.x, pos.y);
-        ctx.strokeStyle = currentColor;
-        ctx.lineWidth = currentSize;
-        ctx.lineCap = 'round';
+    const x = Math.floor((isTouchDevice ? e.touches[0].clientX : e.clientX) - rect.left) * scaleX;
+    const y = Math.floor((isTouchDevice ? e.touches[0].clientY : e.clientY) - rect.top) * scaleY;
+
+    if (currentTool === 'brush' || currentTool === 'eraser') {
+        ctx.lineTo(x, y);
         ctx.stroke();
     }
     
-    lastX = pos.x;
-    lastY = pos.y;
+    lastX = x;
+    lastY = y;
 }
 
 function stopDrawing() {
@@ -149,9 +157,19 @@ function floodFill(startX, startY, fillColor) {
     const startA = pixels[startPos + 3];
 
     // Yeni renk değerlerini al
-    const fillR = parseInt(fillColor.substr(1, 2), 16);
-    const fillG = parseInt(fillColor.substr(3, 2), 16);
-    const fillB = parseInt(fillColor.substr(5, 2), 16);
+    const fillColorObj = hexToRgb(fillColor);
+    if (!fillColorObj) return;
+
+    const fillR = fillColorObj.r;
+    const fillG = fillColorObj.g;
+    const fillB = fillColorObj.b;
+
+    // Eğer başlangıç rengi ile doldurma rengi aynıysa işlem yapma
+    if (Math.abs(startR - fillR) < 5 && 
+        Math.abs(startG - fillG) < 5 && 
+        Math.abs(startB - fillB) < 5) {
+        return;
+    }
 
     // Renk toleransı
     const tolerance = 30;
@@ -170,27 +188,33 @@ function floodFill(startX, startY, fillColor) {
         pixels[pos + 3] = 255;
     }
 
-    // Flood fill algoritması
-    const pixelsToCheck = [[startX, startY]];
+    // Queue tabanlı flood fill algoritması
+    const queue = [[startX, startY]];
     const visited = new Set();
+    const maxPixels = canvas.width * canvas.height;
+    let processedPixels = 0;
 
-    while (pixelsToCheck.length) {
-        const [x, y] = pixelsToCheck.pop();
+    while (queue.length > 0 && processedPixels < maxPixels) {
+        const [x, y] = queue.shift();
         const pos = (y * canvas.width + x) * 4;
         const key = `${x},${y}`;
 
-        if (visited.has(key)) continue;
+        if (x < 0 || x >= canvas.width || y < 0 || y >= canvas.height ||
+            visited.has(key) || !matchesStartColor(pos)) {
+            continue;
+        }
+
         visited.add(key);
-
-        if (!matchesStartColor(pos)) continue;
-
         colorPixel(pos);
+        processedPixels++;
 
-        // Komşu pikselleri kontrol et
-        if (x > 0) pixelsToCheck.push([x - 1, y]);
-        if (x < canvas.width - 1) pixelsToCheck.push([x + 1, y]);
-        if (y > 0) pixelsToCheck.push([x, y - 1]);
-        if (y < canvas.height - 1) pixelsToCheck.push([x, y + 1]);
+        // 4-yönlü komşu pikselleri kontrol et
+        queue.push(
+            [x + 1, y],
+            [x - 1, y],
+            [x, y + 1],
+            [x, y - 1]
+        );
     }
 
     ctx.putImageData(imageData, 0, 0);
@@ -538,26 +562,6 @@ function rgbToHex(rgb) {
     
     return "#" + hex(match[1]) + hex(match[2]) + hex(match[3]);
 }
-
-// Canvas tıklama olayını güncelle
-canvas.addEventListener(isTouchDevice ? 'touchstart' : 'mousedown', function(e) {
-    const rect = canvas.getBoundingClientRect();
-    const x = isTouchDevice ? 
-        e.touches[0].clientX - rect.left : 
-        e.clientX - rect.left;
-    const y = isTouchDevice ? 
-        e.touches[0].clientY - rect.top : 
-        e.clientY - rect.top;
-
-    if (currentTool === 'fill') {
-        const currentColor = document.querySelector('.color-btn.active').style.backgroundColor;
-        floodFill(Math.floor(x), Math.floor(y), rgbToHex(currentColor));
-    } else {
-        isDrawing = true;
-        lastX = x;
-        lastY = y;
-    }
-});
 
 // Başlangıç
 resizeCanvas();
