@@ -154,7 +154,48 @@
             margin: 5px 0;
             color: #333;
         }
+        
+        .tool-btn {
+            padding: 8px 16px;
+            margin: 5px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .tool-btn.active {
+            background: #45a049;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+        }
+        
+        .tool-btn:hover {
+            background: #45a049;
+        }
+
+        .eraser-size-btn {
+            padding: 5px 10px;
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .eraser-size-btn:hover {
+            background: #e0e0e0;
+        }
+        
+        .eraser-size-btn.active {
+            background: #4CAF50;
+            color: white;
+            border-color: #45a049;
+        }
     </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
     <div id="canvas-container">
@@ -162,94 +203,34 @@
     </div>
     <div id="toolbar">
         <div class="toolbar">
-            <div id="color-palette" class="color-palette">
-                <button class="color-btn active" style="background: #FF0000" data-color="#FF0000"></button>
-                <button class="color-btn" style="background: #FF6600" data-color="#FF6600"></button>
-                <button class="color-btn" style="background: #FFA500" data-color="#FFA500"></button>
-                <button class="color-btn" style="background: #FFD700" data-color="#FFD700"></button>
-                <button class="color-btn" style="background: #FFFF00" data-color="#FFFF00"></button>
-                <button class="color-btn" style="background: #98FB98" data-color="#98FB98"></button>
-                <button class="color-btn" style="background: #00FF00" data-color="#00FF00"></button>
-                <button class="color-btn" style="background: #008000" data-color="#008000"></button>
-                <button class="color-btn" style="background: #00FFFF" data-color="#00FFFF"></button>
-                <button class="color-btn" style="background: #0000FF" data-color="#0000FF"></button>
-                <button class="color-btn" style="background: #000080" data-color="#000080"></button>
-                <button class="color-btn" style="background: #4B0082" data-color="#4B0082"></button>
-                <button class="color-btn" style="background: #800080" data-color="#800080"></button>
-                <button class="color-btn" style="background: #FF69B4" data-color="#FF69B4"></button>
-                <button class="color-btn" style="background: #FF1493" data-color="#FF1493"></button>
-                <button class="color-btn" style="background: #8B4513" data-color="#8B4513"></button>
-                <button class="color-btn" style="background: #A0522D" data-color="#A0522D"></button>
-                <button class="color-btn" style="background: #000000" data-color="#000000"></button>
-                <button class="color-btn" style="background: #808080" data-color="#808080"></button>
-                <button class="color-btn" style="background: #FFFFFF" data-color="#FFFFFF"></button>
-            </div>
             <div class="tool-group">
-                <input type="file" id="load-image-btn" accept="image/*" style="display: none;">
-                <button onclick="document.getElementById('load-image-btn').click()">Resim Yükle</button>
-                <button id="save-drawing-btn">Çizimi Kaydet</button>
-            </div>
-
-            <div class="tool-group">
-                <button id="add-emoji-btn">Emoji Ekle</button>
-                <button id="add-text-btn">Yazı Ekle</button>
-            </div>
-
-            <div class="tool-group">
-                <button id="prev-image" class="nav-btn">◀ Önceki Resim</button>
-                <button id="next-image" class="nav-btn">Sonraki Resim ▶</button>
+                <button id="brush-tool" class="tool-btn active">
+                    <i class="fas fa-paint-brush"></i> Fırça
+                </button>
+                <button id="eraser-tool" class="tool-btn">
+                    <i class="fas fa-eraser"></i> Silgi
+                </button>
+                <button id="fill-tool" class="tool-btn">
+                    <i class="fas fa-fill-drip"></i> Boyama
+                </button>
             </div>
 
             <div class="tool-group">
                 <div id="eraser-sizes" class="size-buttons">
                     <h4>Silgi Boyutları</h4>
-                    <!-- Silgi boyutları buraya eklenecek -->
+                    <button class="eraser-size-btn" data-size="5">5px</button>
+                    <button class="eraser-size-btn" data-size="10">10px</button>
+                    <button class="eraser-size-btn" data-size="20">20px</button>
+                    <button class="eraser-size-btn" data-size="30">30px</button>
+                    <button class="eraser-size-btn" data-size="50">50px</button>
                 </div>
             </div>
 
             <div class="tool-group">
-                <button id="flood-fill-btn">Otomatik Boya</button>
+                <button id="prev-image" class="nav-btn">◀ Önceki</button>
+                <button id="next-image" class="nav-btn">Sonraki ▶</button>
             </div>
         </div>
-        <div id="tools-container">
-            <div id="brush-sizes">
-                <button class="brush-btn" data-size="9">
-                    <div class="brush-preview" style="width: 9px; height: 9px;"></div>
-                </button>
-                <button class="brush-btn active" data-size="15">
-                    <div class="brush-preview" style="width: 15px; height: 15px;"></div>
-                </button>
-                <button class="brush-btn" data-size="24">
-                    <div class="brush-preview" style="width: 24px; height: 24px;"></div>
-                </button>
-                <button class="brush-btn" data-size="36">
-                    <div class="brush-preview" style="width: 36px; height: 36px;"></div>
-                </button>
-            </div>
-            <div id="shapes">
-                <button class="shape-btn active" data-shape="brush">
-                    <svg viewBox="0 0 24 24"><path fill="currentColor" d="M20.71 4.04c.39.39.39 1.02 0 1.41L9.17 17H7v-2.17L18.54 4.04c.39-.39 1.02-.39 1.41 0zM7 19h10v2H7z"/></svg>
-                </button>
-                <button class="shape-btn" data-shape="circle">
-                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-                </button>
-                <button class="shape-btn" data-shape="square">
-                    <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-                </button>
-                <button class="shape-btn" data-shape="heart">
-                    <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-                </button>
-                <button class="shape-btn" data-shape="star">
-                    <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-                </button>
-            </div>
-        </div>
-        <div id="bottom-buttons">
-            <button id="clear-btn" class="action-btn">Temizle</button>
-            <button id="next-btn" class="action-btn">Sonraki Resim</button>
-            <button id="party-btn" class="action-btn" style="background: #9C27B0">Balon Partisi!</button>
-        </div>
-        <div id="shape-layer" style="position: absolute; top: 0; left: 0; pointer-events: none; width: 100%; height: 100%;"></div>
     </div>
     <script src="app.js"></script>
 </body>

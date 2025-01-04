@@ -12,7 +12,7 @@ let isDragging = false;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
 
-const images = ['/images/duck1.png', '/images/duck2.png', '/images/duck3.png', '/images/noel.png'];
+const images = ['images/duck1.png', 'images/duck2.png', 'images/duck3.png', 'images/noel.png'];
 const loadedImages = [];
 
 // Canvas boyutunu ayarla
@@ -229,7 +229,6 @@ function animateBalloons() {
 function preloadImages() {
     images.forEach((src, index) => {
         const img = new Image();
-        img.src = src;
         img.onload = () => {
             console.log('Resim başarıyla yüklendi:', src);
             loadedImages[index] = img;
@@ -237,13 +236,7 @@ function preloadImages() {
                 drawImage();
             }
         };
-        img.onerror = (error) => {
-            console.error('Resim yükleme hatası:', {
-                src: src,
-                error: error,
-                path: window.location.href + src
-            });
-        };
+        img.src = src;
     });
 }
 
@@ -389,7 +382,7 @@ document.getElementById('clear-btn').addEventListener('click', () => {
 
 // Resim değiştirme kontrolleri
 let currentImageIndex = 0;
-const images = ['/images/duck1.png', '/images/duck2.png', '/images/duck3.png', '/images/noel.png'];
+const images = ['images/duck1.png', 'images/duck2.png', 'images/duck3.png', 'images/noel.png'];
 const loadedImages = [];
 
 function changeImage(direction) {
@@ -665,6 +658,155 @@ eraserSizes.forEach(size => {
     });
     document.getElementById('eraser-sizes').appendChild(btn);
 });
+
+// Araçlar
+const tools = {
+    BRUSH: 'brush',
+    ERASER: 'eraser',
+    FILL: 'fill'
+};
+
+let currentTool = tools.BRUSH;
+
+// Silgi boyutları
+const eraserSizes = [5, 10, 20, 30, 50];
+let currentEraserSize = eraserSizes[2]; // Varsayılan 20px
+
+function setTool(tool) {
+    currentTool = tool;
+    if (tool === tools.ERASER) {
+        updateEraserCursor();
+    } else {
+        canvas.style.cursor = 'default';
+    }
+}
+
+// Silgi fonksiyonu
+function erase(x, y) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.arc(x, y, currentEraserSize, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+}
+
+// Çizim fonksiyonu
+function draw(e) {
+    if (!isDrawing) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    if (currentTool === tools.ERASER) {
+        erase(x, y);
+    } else if (currentTool === tools.FILL) {
+        floodFill(x, y, hexToRgb(currentColor));
+    } else {
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+    }
+}
+
+// Hex rengi RGB'ye çevir
+function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
+}
+
+// Otomatik boyama fonksiyonu
+function floodFill(startX, startY, fillColor) {
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const pixels = imageData.data;
+    
+    const startPos = (startY * canvas.width + startX) * 4;
+    const startR = pixels[startPos];
+    const startG = pixels[startPos + 1];
+    const startB = pixels[startPos + 2];
+    
+    // Renk toleransı
+    const tolerance = 30;
+    
+    function matchesStart(pos) {
+        return Math.abs(pixels[pos] - startR) <= tolerance &&
+               Math.abs(pixels[pos + 1] - startG) <= tolerance &&
+               Math.abs(pixels[pos + 2] - startB) <= tolerance;
+    }
+    
+    const stack = [[startX, startY]];
+    const visited = new Set();
+    
+    while (stack.length > 0) {
+        const [x, y] = stack.pop();
+        
+        if (x < 0 || x >= canvas.width || y < 0 || y >= canvas.height) {
+            continue;
+        }
+        
+        const pos = (y * canvas.width + x) * 4;
+        const key = `${x},${y}`;
+        
+        if (visited.has(key) || !matchesStart(pos)) {
+            continue;
+        }
+        
+        visited.add(key);
+        
+        // Rengi değiştir
+        pixels[pos] = fillColor.r;
+        pixels[pos + 1] = fillColor.g;
+        pixels[pos + 2] = fillColor.b;
+        pixels[pos + 3] = 255;
+        
+        stack.push(
+            [x + 1, y],
+            [x - 1, y],
+            [x, y + 1],
+            [x, y - 1]
+        );
+    }
+    
+    ctx.putImageData(imageData, 0, 0);
+}
+
+// Event listeners
+canvas.addEventListener('mousedown', (e) => {
+    isDrawing = true;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    if (currentTool === tools.FILL) {
+        floodFill(x, y, hexToRgb(currentColor));
+    } else {
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+    }
+});
+
+canvas.addEventListener('mousemove', draw);
+canvas.addEventListener('mouseup', () => isDrawing = false);
+canvas.addEventListener('mouseout', () => isDrawing = false);
+
+// Silgi boyutu seçimi
+document.querySelectorAll('.eraser-size-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        currentEraserSize = parseInt(btn.dataset.size);
+        setTool(tools.ERASER);
+        updateEraserCursor();
+    });
+});
+
+// Araç seçimi
+document.getElementById('brush-tool').addEventListener('click', () => setTool(tools.BRUSH));
+document.getElementById('eraser-tool').addEventListener('click', () => setTool(tools.ERASER));
+document.getElementById('fill-tool').addEventListener('click', () => setTool(tools.FILL));
 
 // Otomatik boyama butonu
 document.getElementById('flood-fill-btn').addEventListener('click', () => {
