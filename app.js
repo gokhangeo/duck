@@ -2,10 +2,6 @@
 const canvas = document.getElementById('drawing-canvas');
 const ctx = canvas.getContext('2d');
 
-// Çizim geçmişi için ikinci canvas
-const historyCanvas = document.createElement('canvas');
-const historyCtx = historyCanvas.getContext('2d');
-
 // Araç ve mod değişkenleri
 let currentTool = 'brush';
 let isDrawing = false;
@@ -21,12 +17,8 @@ function resizeCanvas() {
     const container = document.getElementById('canvas-container');
     canvas.width = container.clientWidth;
     canvas.height = container.clientHeight;
-    historyCanvas.width = container.clientWidth;
-    historyCanvas.height = container.clientHeight;
     if (backgroundImage) {
         ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
-        // Arka plan resmini history canvas'a da kopyala
-        historyCtx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
     }
 }
 
@@ -57,10 +49,6 @@ function startDrawing(e) {
     const pos = getMousePos(canvas, e);
     lastX = pos.x;
     lastY = pos.y;
-    
-    // Çizime başlamadan önce mevcut canvas'ı history'e kaydet
-    historyCtx.clearRect(0, 0, canvas.width, canvas.height);
-    historyCtx.drawImage(canvas, 0, 0);
 }
 
 function draw(e) {
@@ -75,7 +63,6 @@ function draw(e) {
     ctx.lineTo(x, y);
     
     if (currentTool === 'rainbow') {
-        // Gökkuşağı efekti
         rainbowHue = (rainbowHue + 2) % 360;
         ctx.strokeStyle = `hsl(${rainbowHue}, 100%, 50%)`;
         ctx.shadowBlur = 10;
@@ -96,7 +83,7 @@ function draw(e) {
 
 function stopDrawing() {
     isDrawing = false;
-    ctx.shadowBlur = 0; // Gölgeyi kapat
+    ctx.shadowBlur = 0;
 }
 
 // Yardımcı fonksiyonlar
@@ -173,13 +160,22 @@ document.querySelectorAll('.size-btn').forEach(btn => {
     });
 });
 
-// Temizle butonu - sadece çizimleri temizler
+// Temizle butonu
 document.getElementById('clear-btn').addEventListener('click', () => {
-    // History canvas'tan orijinal resmi geri yükle
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+    const tempCtx = tempCanvas.getContext('2d');
+    
+    // Arka plan resmini geçici canvas'a kopyala
     if (backgroundImage) {
-        ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+        tempCtx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
     }
+    
+    // Ana canvas'ı temizle ve geçici canvas'tan arka planı geri kopyala
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(tempCanvas, 0, 0);
+    
     // Rainbow modunu kapat
     if (currentTool === 'rainbow') {
         setTool('brush');
@@ -204,12 +200,8 @@ fileInput.addEventListener('change', function(e) {
         const img = new Image();
         img.onload = function() {
             backgroundImage = img;
-            // Ana canvas'ı temizle ve resmi çiz
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            // History canvas'ı da güncelle
-            historyCtx.clearRect(0, 0, canvas.width, canvas.height);
-            historyCtx.drawImage(img, 0, 0, canvas.width, canvas.height);
         }
         img.src = event.target.result;
     }
