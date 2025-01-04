@@ -48,33 +48,73 @@ self.addEventListener('activate', (event) => {
 
 // Fetch İsteklerini Yönetme
 self.addEventListener('fetch', (event) => {
+    // GitHub API istekleri için özel strateji
+    if (event.request.url.includes('api.github.com')) {
+        event.respondWith(
+            fetch(event.request)
+                .then(response => {
+                    const clonedResponse = response.clone();
+                    caches.open(CACHE_NAME)
+                        .then(cache => {
+                            cache.put(event.request, clonedResponse);
+                        });
+                    return response;
+                })
+                .catch(() => {
+                    return caches.match(event.request);
+                })
+        );
+        return;
+    }
+
+    // Resim dosyaları için özel strateji
+    if (event.request.url.match(/\.(jpg|jpeg|png|gif)$/i)) {
+        event.respondWith(
+            caches.match(event.request)
+                .then((response) => {
+                    if (response) {
+                        return response;
+                    }
+                    return fetch(event.request)
+                        .then((response) => {
+                            const clonedResponse = response.clone();
+                            caches.open(CACHE_NAME)
+                                .then(cache => {
+                                    cache.put(event.request, clonedResponse);
+                                });
+                            return response;
+                        })
+                        .catch(() => {
+                            return new Response('Resim yüklenemedi', {
+                                status: 404,
+                                headers: { 'Content-Type': 'text/plain' }
+                            });
+                        });
+                })
+        );
+        return;
+    }
+
+    // Diğer istekler için normal strateji
     event.respondWith(
         caches.match(event.request)
             .then((response) => {
-                // Cache'de varsa cache'den döndür
                 if (response) {
                     return response;
                 }
-
-                // Cache'de yoksa ağdan al ve cache'e ekle
                 return fetch(event.request)
                     .then((response) => {
-                        // Geçersiz yanıt veya CORS olmayan istekler için direkt döndür
                         if (!response || response.status !== 200 || response.type !== 'basic') {
                             return response;
                         }
-
-                        // Yanıtı cache'e ekle
                         const responseToCache = response.clone();
                         caches.open(CACHE_NAME)
                             .then((cache) => {
                                 cache.put(event.request, responseToCache);
                             });
-
                         return response;
                     })
                     .catch(() => {
-                        // Ağ hatası durumunda offline sayfasını göster
                         return caches.match('/offline.html');
                     });
             })

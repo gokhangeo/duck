@@ -277,7 +277,93 @@ document.getElementById('party-btn').addEventListener('click', () => {
     }, 50);
 });
 
+// Resim değişkenleri
+const REPO_OWNER = 'showman1907';
+const REPO_NAME = 'duck';
+const IMAGE_PATH = 'images';
+let currentImageIndex = 0;
+let images = [];
+
+// GitHub'dan resimleri çek
+async function fetchImagesFromGitHub() {
+    try {
+        const response = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${IMAGE_PATH}`);
+        const data = await response.json();
+        
+        // Sadece resim dosyalarını filtrele
+        images = data.filter(file => 
+            file.name.match(/\.(jpg|jpeg|png|gif)$/i)
+        ).map(file => file.download_url);
+        
+        if (images.length > 0) {
+            loadAndDrawImage(0);
+        }
+    } catch (error) {
+        console.error('Resimler yüklenemedi:', error);
+    }
+}
+
+// Resmi yükle ve çiz
+function loadAndDrawImage(index) {
+    if (index >= 0 && index < images.length) {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = function() {
+            // Canvas'ı temizle
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Resmi ortala ve boyutlandır
+            const scale = Math.min(
+                (canvas.width * 0.8) / img.width,
+                (canvas.height * 0.8) / img.height
+            );
+            
+            const x = (canvas.width - img.width * scale) / 2;
+            const y = (canvas.height - img.height * scale) / 2;
+            
+            ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+            currentImageIndex = index;
+            updateImageButtons();
+        };
+        img.src = images[index];
+    }
+}
+
+// Resim değiştirme butonlarını güncelle
+function updateImageButtons() {
+    const prevBtn = document.getElementById('prev-image');
+    const nextBtn = document.getElementById('next-image');
+    
+    if (prevBtn && nextBtn) {
+        prevBtn.disabled = currentImageIndex <= 0;
+        nextBtn.disabled = currentImageIndex >= images.length - 1;
+    }
+}
+
+// Resim değiştirme fonksiyonları
+function changeImage(direction) {
+    let newIndex;
+    if (direction === 'next' && currentImageIndex < images.length - 1) {
+        newIndex = currentImageIndex + 1;
+    } else if (direction === 'prev' && currentImageIndex > 0) {
+        newIndex = currentImageIndex - 1;
+    } else {
+        return;
+    }
+    loadAndDrawImage(newIndex);
+}
+
+document.getElementById('prev-image').addEventListener('click', () => {
+    changeImage('prev');
+});
+
+document.getElementById('next-image').addEventListener('click', () => {
+    changeImage('next');
+});
+
 // Başlangıç
 resizeCanvas();
 createColorPalette();
 updateBrushStyle();
+fetchImagesFromGitHub();
