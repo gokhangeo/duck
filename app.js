@@ -30,6 +30,9 @@ let shapeStartY = 0;
 let isSelecting = false;
 let selectedShapeIndex = -1;
 
+// Yüklenen resim için değişken
+let loadedImage = null;
+
 // Canvas boyutunu ayarla
 function resizeCanvas() {
     const container = document.getElementById('canvas-container');
@@ -75,8 +78,8 @@ function setTool(tool) {
 }
 
 function setShape(shape) {
-    currentShapeType = shape;
     currentTool = 'shape';
+    currentShapeType = shape;
     document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
     document.getElementById(`shape-${shape}`).classList.add('active');
 }
@@ -372,6 +375,45 @@ function handleTouchEnd(e) {
     canvas.dispatchEvent(mouseEvent);
 }
 
+// Resim yükleme
+const fileInput = document.getElementById('file-input');
+fileInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    
+    reader.onload = function(event) {
+        const img = new Image();
+        img.onload = function() {
+            // Yüklenen resmi sakla
+            loadedImage = img;
+            // Canvas'ı temizle ve resmi çiz
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        }
+        img.src = event.target.result;
+    }
+    reader.readAsDataURL(file);
+});
+
+// Temizle butonu
+document.getElementById('clear-btn').addEventListener('click', () => {
+    // Canvas'ı temizle
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Şekilleri sıfırla
+    shapes = [];
+    
+    // Parti modunu kapat
+    if (currentTool === 'party') {
+        setTool('brush');
+    }
+    
+    // Eğer yüklenmiş bir resim varsa, onu tekrar çiz
+    if (loadedImage) {
+        ctx.drawImage(loadedImage, 0, 0, canvas.width, canvas.height);
+    }
+});
+
 // Renk paletini oluştur
 const colors = [
     '#000000', '#ffffff', '#ff0000', '#00ff00', '#0000ff',
@@ -401,34 +443,12 @@ document.querySelectorAll('.size-btn').forEach(btn => {
     });
 });
 
-// Temizle butonu
-document.getElementById('clear-btn').addEventListener('click', () => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    shapes = [];
-});
-
 // Kaydet butonu
 document.getElementById('save-btn').addEventListener('click', () => {
     const link = document.createElement('a');
     link.download = 'boyama.png';
     link.href = canvas.toDataURL();
     link.click();
-});
-
-// Resim yükleme
-const fileInput = document.getElementById('file-input');
-fileInput.addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    const reader = new FileReader();
-    
-    reader.onload = function(event) {
-        const img = new Image();
-        img.onload = function() {
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        }
-        img.src = event.target.result;
-    }
-    reader.readAsDataURL(file);
 });
 
 // Sayfa yüklendiğinde ve pencere boyutu değiştiğinde canvas'ı yeniden boyutlandır
