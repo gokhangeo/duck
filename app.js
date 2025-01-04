@@ -7,9 +7,13 @@ let currentTool = 'brush';
 let isDrawing = false;
 let currentColor = '#000000';
 let brushSize = 10;
+let startX = 0;
+let startY = 0;
 let lastX = 0;
 let lastY = 0;
-let rainbowHue = 0;
+let partyMode = false;
+let partyHue = 0;
+let partyInterval = null;
 let backgroundImage = null;
 
 // Canvas boyutunu ayarla
@@ -36,19 +40,53 @@ canvas.addEventListener('touchend', handleTouchEnd);
 // Araç butonları
 document.getElementById('brush-tool').addEventListener('click', () => setTool('brush'));
 document.getElementById('eraser-tool').addEventListener('click', () => setTool('eraser'));
-document.getElementById('party-tool').addEventListener('click', () => setTool('rainbow'));
+document.getElementById('party-tool').addEventListener('click', () => setTool('party'));
+document.getElementById('rect-tool').addEventListener('click', () => setTool('rect'));
+document.getElementById('circle-tool').addEventListener('click', () => setTool('circle'));
+document.getElementById('triangle-tool').addEventListener('click', () => setTool('triangle'));
+document.getElementById('line-tool').addEventListener('click', () => setTool('line'));
 
 function setTool(tool) {
+    if (currentTool === 'party') {
+        stopPartyMode();
+    }
     currentTool = tool;
+    if (tool === 'party') {
+        startPartyMode();
+    }
     document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
     document.getElementById(`${tool}-tool`).classList.add('active');
+}
+
+function startPartyMode() {
+    partyMode = true;
+    partyHue = 0;
+    partyInterval = setInterval(() => {
+        partyHue = (partyHue + 5) % 360;
+    }, 50);
+}
+
+function stopPartyMode() {
+    partyMode = false;
+    if (partyInterval) {
+        clearInterval(partyInterval);
+        partyInterval = null;
+    }
 }
 
 function startDrawing(e) {
     isDrawing = true;
     const pos = getMousePos(canvas, e);
+    startX = pos.x;
+    startY = pos.y;
     lastX = pos.x;
     lastY = pos.y;
+
+    if (['rect', 'circle', 'triangle', 'line'].includes(currentTool)) {
+        // Şekil çizimi için başlangıç noktasını kaydet
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+    }
 }
 
 function draw(e) {
@@ -58,32 +96,90 @@ function draw(e) {
     const x = pos.x;
     const y = pos.y;
 
-    ctx.beginPath();
-    ctx.moveTo(lastX, lastY);
-    ctx.lineTo(x, y);
-    
-    if (currentTool === 'rainbow') {
-        rainbowHue = (rainbowHue + 2) % 360;
-        ctx.strokeStyle = `hsl(${rainbowHue}, 100%, 50%)`;
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = `hsl(${(rainbowHue + 180) % 360}, 100%, 50%)`;
+    if (['rect', 'circle', 'triangle', 'line'].includes(currentTool)) {
+        // Şekil önizlemesi için geçici canvas kullan
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        const tempCtx = tempCanvas.getContext('2d');
+
+        // Mevcut canvas içeriğini kopyala
+        tempCtx.drawImage(canvas, 0, 0);
+
+        // Şekli çiz
+        drawShape(tempCtx, currentTool, startX, startY, x, y);
+
+        // Ana canvas'ı temizle ve geçici canvas'ı kopyala
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (backgroundImage) {
+            ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+        }
+        ctx.drawImage(tempCanvas, 0, 0);
     } else {
-        ctx.strokeStyle = currentTool === 'eraser' ? '#ffffff' : currentColor;
-        ctx.shadowBlur = 0;
+        // Normal çizim
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(x, y);
+        
+        if (partyMode) {
+            ctx.strokeStyle = `hsl(${partyHue}, 100%, 50%)`;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = `hsl(${(partyHue + 180) % 360}, 100%, 50%)`;
+        } else {
+            ctx.strokeStyle = currentTool === 'eraser' ? '#ffffff' : currentColor;
+            ctx.shadowBlur = 0;
+        }
+        
+        ctx.lineWidth = brushSize;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.stroke();
     }
-    
-    ctx.lineWidth = brushSize;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.stroke();
 
     lastX = x;
     lastY = y;
 }
 
+function drawShape(context, shape, startX, startY, endX, endY) {
+    context.beginPath();
+    context.strokeStyle = currentColor;
+    context.lineWidth = brushSize;
+    context.lineCap = 'round';
+    context.lineJoin = 'round';
+
+    switch (shape) {
+        case 'rect':
+            const width = endX - startX;
+            const height = endY - startY;
+            context.rect(startX, startY, width, height);
+            break;
+        case 'circle':
+            const radius = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
+            context.arc(startX, startY, radius, 0, Math.PI * 2);
+            break;
+        case 'triangle':
+            context.moveTo(startX, startY);
+            context.lineTo(endX, endY);
+            context.lineTo(startX - (endX - startX), endY);
+            context.closePath();
+            break;
+        case 'line':
+            context.moveTo(startX, startY);
+            context.lineTo(endX, endY);
+            break;
+    }
+    context.stroke();
+}
+
 function stopDrawing() {
+    if (!isDrawing) return;
     isDrawing = false;
     ctx.shadowBlur = 0;
+
+    if (['rect', 'circle', 'triangle', 'line'].includes(currentTool)) {
+        // Son şekli çiz
+        drawShape(ctx, currentTool, startX, startY, lastX, lastY);
+    }
 }
 
 // Yardımcı fonksiyonlar
@@ -147,6 +243,10 @@ colors.forEach(color => {
         currentColor = color;
         document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('active'));
         colorBtn.classList.add('active');
+        if (partyMode) {
+            stopPartyMode();
+            setTool('brush');
+        }
     });
     colorPalette.appendChild(colorBtn);
 });
@@ -176,8 +276,9 @@ document.getElementById('clear-btn').addEventListener('click', () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(tempCanvas, 0, 0);
     
-    // Rainbow modunu kapat
-    if (currentTool === 'rainbow') {
+    // Parti modunu kapat
+    if (partyMode) {
+        stopPartyMode();
         setTool('brush');
     }
 });

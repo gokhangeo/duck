@@ -3,8 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gizem Elgül Boyama Defteri</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <title>Paper Duck - Boyama Uygulaması</title>
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ffffff">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -15,392 +18,276 @@
         body {
             font-family: Arial, sans-serif;
             overflow: hidden;
-            background: #f0f0f0;
+            background-color: #f0f0f0;
             touch-action: none;
         }
 
-        #header {
-            background: #FF69B4;
-            color: white;
-            text-align: center;
-            padding: 10px;
-            font-size: 1.2em;
-            font-weight: bold;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 100;
+        #app-container {
+            display: flex;
+            height: 100vh;
+            position: relative;
         }
 
-        #main-container {
+        #sidebar {
+            width: 70px;
+            background-color: #333;
+            padding: 10px;
             display: flex;
-            height: calc(100vh - 40px);
-            margin-top: 40px;
+            flex-direction: column;
+            gap: 15px;
+            transition: transform 0.3s ease;
+            z-index: 1000;
         }
 
         #canvas-container {
             flex: 1;
-            background: white;
             position: relative;
-            overflow: hidden;
+            background-color: #fff;
         }
 
         #drawing-canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
             width: 100%;
             height: 100%;
             touch-action: none;
         }
 
-        #toggle-sidebar {
-            position: fixed;
-            top: 50%;
-            right: 10px;
-            transform: translateY(-50%);
-            background: #FF69B4;
-            color: white;
-            border: none;
-            border-radius: 50%;
+        .tool-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 15px;
+        }
+
+        .tool-btn {
             width: 50px;
             height: 50px;
-            font-size: 24px;
+            border: none;
+            border-radius: 8px;
+            background-color: #444;
+            color: #fff;
             cursor: pointer;
-            z-index: 1000;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            transition: transform 0.3s;
+            transition: all 0.2s ease;
         }
 
-        #toggle-sidebar.collapsed {
-            transform: translateY(-50%) rotate(180deg);
+        .tool-btn:hover {
+            background-color: #555;
+            transform: translateY(-2px);
         }
 
-        #sidebar {
-            width: 300px;
-            background: white;
-            padding: 10px;
-            overflow-y: auto;
-            transition: transform 0.3s;
-            position: fixed;
-            top: 40px;
-            right: 0;
-            bottom: 0;
-            box-shadow: -2px 0 5px rgba(0,0,0,0.1);
-            z-index: 90;
+        .tool-btn.active {
+            background-color: #666;
+            box-shadow: 0 0 0 2px #fff;
+            transform: translateY(-2px);
         }
 
-        #sidebar.collapsed {
-            transform: translateX(100%);
+        .tool-btn i {
+            font-size: 24px;
         }
 
-        .panel {
-            background: #f8f8f8;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
+        .group-title {
+            color: #fff;
+            font-size: 12px;
+            text-align: center;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
-        .panel-title {
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #333;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .panel-title i {
-            color: #FF69B4;
-        }
-
-        .color-palette {
+        #color-palette {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 5px;
-            margin-bottom: 10px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            padding: 5px;
+            background-color: #444;
+            border-radius: 8px;
         }
 
         .color-btn {
-            width: 100%;
-            aspect-ratio: 1;
-            border: 2px solid #ddd;
-            border-radius: 5px;
+            width: 24px;
+            height: 24px;
+            border: 2px solid #666;
+            border-radius: 50%;
             cursor: pointer;
-            transition: transform 0.2s;
+            transition: all 0.2s ease;
         }
 
         .color-btn:hover {
             transform: scale(1.1);
+            border-color: #fff;
         }
 
         .color-btn.active {
-            border-color: #FF69B4;
+            border-color: #fff;
             transform: scale(1.1);
-        }
-
-        .tool-group {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 5px;
-        }
-
-        .tool-btn {
-            padding: 8px;
-            border: none;
-            border-radius: 5px;
-            background: #f0f0f0;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-            transition: all 0.2s;
-        }
-
-        .tool-btn:hover {
-            background: #e0e0e0;
-        }
-
-        .tool-btn.active {
-            background: #FF69B4;
-            color: white;
-        }
-
-        .tool-btn i {
-            font-size: 1.2em;
-        }
-
-        .size-buttons {
-            display: flex;
-            justify-content: space-between;
-            gap: 5px;
+            box-shadow: 0 0 10px rgba(255,255,255,0.3);
         }
 
         .size-btn {
-            flex: 1;
-            padding: 8px;
+            width: 50px;
+            height: 50px;
             border: none;
-            border-radius: 5px;
-            background: #f0f0f0;
+            border-radius: 8px;
+            background-color: #444;
+            color: #fff;
             cursor: pointer;
-            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.2s ease;
         }
 
         .size-btn:hover {
-            background: #e0e0e0;
+            background-color: #555;
+            transform: translateY(-2px);
         }
 
         .size-btn.active {
-            background: #FF69B4;
-            color: white;
+            background-color: #666;
+            box-shadow: 0 0 0 2px #fff;
+            transform: translateY(-2px);
         }
 
-        .action-btn {
-            width: 100%;
-            padding: 10px;
+        #toggle-sidebar {
+            position: absolute;
+            left: 80px;
+            top: 10px;
+            width: 40px;
+            height: 40px;
             border: none;
-            border-radius: 5px;
-            background: #FF69B4;
-            color: white;
+            border-radius: 8px;
+            background-color: #333;
+            color: #fff;
             cursor: pointer;
-            margin-top: 5px;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 5px;
-            transition: background 0.2s;
+            transition: all 0.3s ease;
+            z-index: 900;
         }
 
-        .action-btn:hover {
-            background: #ff4da6;
+        #toggle-sidebar.collapsed {
+            left: 10px;
         }
 
-        #upload-label {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-            padding: 10px;
-            background: #FF69B4;
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-bottom: 5px;
-            transition: background 0.2s;
+        #sidebar.collapsed {
+            transform: translateX(-100%);
         }
 
-        #upload-label:hover {
-            background: #ff4da6;
-        }
-
-        #file-input {
-            display: none;
-        }
-
+        /* Mobil Stil */
         @media (max-width: 768px) {
             #sidebar {
+                position: fixed;
+                bottom: -100%;
+                left: 0;
                 width: 100%;
-                height: 60%;
-                bottom: 0;
-                top: auto;
-                transform: translateY(100%);
-            }
-
-            #sidebar.collapsed {
-                transform: translateY(100%);
+                height: auto;
+                flex-direction: row;
+                padding: 15px;
+                transition: bottom 0.3s ease;
+                background-color: rgba(51, 51, 51, 0.95);
             }
 
             #sidebar.show {
-                transform: translateY(0);
+                bottom: 0;
+            }
+
+            .tool-group {
+                flex-direction: row;
+                border-bottom: none;
+                border-right: 1px solid #444;
+                padding-right: 15px;
+                margin-right: 15px;
+                margin-bottom: 0;
+                padding-bottom: 0;
+            }
+
+            #color-palette {
+                grid-template-columns: repeat(5, 1fr);
             }
 
             #toggle-sidebar {
-                bottom: 10px;
+                bottom: 20px;
                 top: auto;
-                right: 10px;
-                transform: none;
-            }
-
-            #toggle-sidebar.collapsed {
-                transform: rotate(180deg);
-            }
-
-            .tool-group {
-                grid-template-columns: repeat(3, 1fr);
-            }
-
-            .color-palette {
-                grid-template-columns: repeat(6, 1fr);
-            }
-        }
-
-        @media (max-width: 480px) {
-            .tool-group {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .color-palette {
-                grid-template-columns: repeat(5, 1fr);
+                left: auto;
+                right: 20px;
             }
         }
     </style>
 </head>
 <body>
-    <div id="header">GİZEM ELGÜL BOYAMA DEFTERİ</div>
-    <div id="main-container">
+    <div id="app-container">
+        <div id="sidebar">
+            <div class="tool-group">
+                <div class="group-title">Araçlar</div>
+                <button id="brush-tool" class="tool-btn active" title="Fırça">
+                    <i class="fas fa-paint-brush"></i>
+                </button>
+                <button id="eraser-tool" class="tool-btn" title="Silgi">
+                    <i class="fas fa-eraser"></i>
+                </button>
+                <button id="party-tool" class="tool-btn" title="Parti">
+                    <i class="fas fa-star"></i>
+                </button>
+            </div>
+
+            <div class="tool-group">
+                <div class="group-title">Şekiller</div>
+                <button id="rect-tool" class="tool-btn" title="Dikdörtgen">
+                    <i class="fas fa-square"></i>
+                </button>
+                <button id="circle-tool" class="tool-btn" title="Daire">
+                    <i class="fas fa-circle"></i>
+                </button>
+                <button id="triangle-tool" class="tool-btn" title="Üçgen">
+                    <i class="fas fa-play" style="transform: rotate(90deg);"></i>
+                </button>
+                <button id="line-tool" class="tool-btn" title="Çizgi">
+                    <i class="fas fa-minus" style="transform: rotate(45deg);"></i>
+                </button>
+            </div>
+
+            <div class="tool-group">
+                <div class="group-title">Renkler</div>
+                <div id="color-palette"></div>
+            </div>
+
+            <div class="tool-group">
+                <div class="group-title">Boyut</div>
+                <button class="size-btn active" data-size="5">S</button>
+                <button class="size-btn" data-size="10">M</button>
+                <button class="size-btn" data-size="20">L</button>
+            </div>
+
+            <div class="tool-group">
+                <div class="group-title">İşlemler</div>
+                <button id="clear-btn" class="tool-btn" title="Temizle">
+                    <i class="fas fa-trash"></i>
+                </button>
+                <button id="save-btn" class="tool-btn" title="Kaydet">
+                    <i class="fas fa-save"></i>
+                </button>
+                <label for="file-input" class="tool-btn" title="Resim Yükle" style="cursor: pointer;">
+                    <i class="fas fa-upload"></i>
+                </label>
+                <input type="file" id="file-input" accept="image/*" style="display: none;">
+            </div>
+        </div>
+
+        <button id="toggle-sidebar" title="Menüyü Aç/Kapat">
+            <i class="fas fa-bars"></i>
+        </button>
+
         <div id="canvas-container">
             <canvas id="drawing-canvas"></canvas>
         </div>
-        <button id="toggle-sidebar">
-            <i class="fas fa-palette"></i>
-        </button>
-        <div id="sidebar">
-            <div class="panel">
-                <div class="panel-title">
-                    <i class="fas fa-palette"></i>
-                    Renkler
-                </div>
-                <div id="color-palette" class="color-palette">
-                    <!-- Renkler JavaScript tarafından eklenecek -->
-                </div>
-            </div>
-
-            <div class="panel">
-                <div class="panel-title">
-                    <i class="fas fa-tools"></i>
-                    Araçlar
-                </div>
-                <div class="tool-group">
-                    <button id="brush-tool" class="tool-btn active" title="Fırça">
-                        <i class="fas fa-paint-brush"></i>
-                    </button>
-                    <button id="eraser-tool" class="tool-btn" title="Silgi">
-                        <i class="fas fa-eraser"></i>
-                    </button>
-                    <button id="party-tool" class="tool-btn" title="Gökkuşağı">
-                        <i class="fas fa-rainbow"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="panel">
-                <div class="panel-title">
-                    <i class="fas fa-shapes"></i>
-                    Şekiller
-                </div>
-                <div class="tool-group shapes-group">
-                    <button id="shape-circle" class="tool-btn shape-btn" title="Daire">
-                        <i class="far fa-circle"></i>
-                    </button>
-                    <button id="shape-square" class="tool-btn shape-btn" title="Kare">
-                        <i class="far fa-square"></i>
-                    </button>
-                    <button id="shape-triangle" class="tool-btn shape-btn" title="Üçgen">
-                        <i class="fas fa-play"></i>
-                    </button>
-                    <button id="shape-star" class="tool-btn shape-btn" title="Yıldız">
-                        <i class="far fa-star"></i>
-                    </button>
-                    <button id="shape-heart" class="tool-btn shape-btn" title="Kalp">
-                        <i class="far fa-heart"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="panel">
-                <div class="panel-title">
-                    <i class="fas fa-ruler"></i>
-                    Boyut
-                </div>
-                <div class="size-buttons">
-                    <button class="size-btn" data-size="5">5px</button>
-                    <button class="size-btn active" data-size="10">10px</button>
-                    <button class="size-btn" data-size="20">20px</button>
-                    <button class="size-btn" data-size="30">30px</button>
-                    <button class="size-btn" data-size="50">50px</button>
-                </div>
-            </div>
-
-            <div class="panel">
-                <div class="panel-title">
-                    <i class="fas fa-images"></i>
-                    Resimler
-                </div>
-                <div class="tool-group">
-                    <button id="prev-image" class="tool-btn">
-                        <i class="fas fa-chevron-left"></i> Önceki
-                    </button>
-                    <button id="next-image" class="tool-btn">
-                        <i class="fas fa-chevron-right"></i> Sonraki
-                    </button>
-                </div>
-            </div>
-
-            <div class="panel">
-                <div class="panel-title">
-                    <i class="fas fa-file"></i>
-                    Dosya İşlemleri
-                </div>
-                <div class="tool-group">
-                    <label id="upload-label" for="file-input" class="action-btn">
-                        <i class="fas fa-upload"></i> Resim Yükle
-                    </label>
-                    <input type="file" id="file-input" accept="image/*">
-                    <button id="clear-btn" class="action-btn">
-                        <i class="fas fa-trash"></i> Temizle
-                    </button>
-                    <button id="save-btn" class="action-btn">
-                        <i class="fas fa-save"></i> Kaydet
-                    </button>
-                </div>
-            </div>
-        </div>
     </div>
+
     <script src="app.js"></script>
 </body>
 </html>
