@@ -3,15 +3,24 @@ const canvas = document.getElementById('drawing-canvas');
 const ctx = canvas.getContext('2d');
 
 // Araç ve mod değişkenleri
-let currentTool = 'brush';
 let isDrawing = false;
+let currentTool = 'brush';
 let currentColor = '#000000';
 let currentSize = 5;
-let lastPoint;
+let lastX = 0;
+let lastY = 0;
+let backgroundImage = null;
+let currentBackgroundImage = null;
+let partyInterval = null;
 let partyMode = false;
 let rainbowMode = false;
 let rainbowIndex = 0;
-let currentBackgroundImage = null;
+let shapeStartX = 0;
+let shapeStartY = 0;
+
+// Geçici canvas oluştur
+const tempCanvas = document.createElement('canvas');
+const tempCtx = tempCanvas.getContext('2d');
 
 // Renk paleti
 const colors = [
@@ -60,7 +69,6 @@ async function loadGitHubImages() {
 }
 
 let currentImageIndex = 0;
-let backgroundImage = null;
 
 function loadBackgroundImage(url) {
     const img = new Image();
@@ -180,20 +188,15 @@ document.getElementById('line-tool').addEventListener('click', () => setTool('li
 document.getElementById('rainbow-tool').addEventListener('click', () => setTool('rainbow'));
 
 function setTool(tool) {
-    if (currentTool === 'party') {
-        stopPartyMode();
-    }
     currentTool = tool;
-    if (tool === 'party') {
-        startPartyMode();
-    }
-    if (tool === 'rainbow') {
-        rainbowMode = true;
-    } else {
-        rainbowMode = false;
-    }
     document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
     document.getElementById(`${tool}-tool`).classList.add('active');
+    
+    // Parti modunu kapat
+    if (tool !== 'party' && partyMode) {
+        partyMode = false;
+        clearInterval(partyInterval);
+    }
 }
 
 function startPartyMode() {
@@ -215,188 +218,104 @@ function stopPartyMode() {
 function startDrawing(e) {
     isDrawing = true;
     const pos = getMousePos(canvas, e);
-    lastPoint = pos;
+    lastX = pos.x;
+    lastY = pos.y;
+    shapeStartX = pos.x;
+    shapeStartY = pos.y;
+
+    if (['rect', 'circle', 'triangle', 'line'].includes(currentTool)) {
+        // Geçici canvas'ı hazırla
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+        
+        // Mevcut canvas içeriğini geçici canvas'a kopyala
+        tempCtx.drawImage(canvas, 0, 0);
+    }
 }
 
 function draw(e) {
     if (!isDrawing) return;
-    
+
     const pos = getMousePos(canvas, e);
-    
+
     if (['rect', 'circle', 'triangle', 'line'].includes(currentTool)) {
-        // Şekil önizlemesi için geçici canvas kullan
-        const tempCanvas = document.createElement('canvas');
-        const tempCtx = tempCanvas.getContext('2d');
-
-        // Mevcut canvas içeriğini kopyala
-        tempCtx.drawImage(canvas, 0, 0);
-
-        // Şekli çiz
-        drawShape(tempCtx, currentTool, lastPoint.x, lastPoint.y, pos.x, pos.y);
-
-        // Ana canvas'ı temizle ve geçici canvas'ı kopyala
+        // Ana canvas'ı temizle ve geçici canvas'ı çiz
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         if (backgroundImage) {
             ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
         }
         ctx.drawImage(tempCanvas, 0, 0);
-    } else {
-        // Normal çizim
+
+        // Şekli çiz
         ctx.beginPath();
-        ctx.moveTo(lastPoint.x, lastPoint.y);
-        ctx.lineTo(pos.x, pos.y);
-        
-        if (partyMode) {
-            ctx.strokeStyle = `hsl(${partyHue}, 100%, 50%)`;
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = `hsl(${(partyHue + 180) % 360}, 100%, 50%)`;
-        } else if (rainbowMode) {
-            ctx.strokeStyle = getRainbowColor();
-        } else {
-            ctx.strokeStyle = currentTool === 'eraser' ? '#ffffff' : currentColor;
-            ctx.shadowBlur = 0;
-        }
-        
+        ctx.strokeStyle = currentColor;
         ctx.lineWidth = currentSize;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
+
+        switch(currentTool) {
+            case 'rect':
+                const width = pos.x - shapeStartX;
+                const height = pos.y - shapeStartY;
+                ctx.strokeRect(shapeStartX, shapeStartY, width, height);
+                break;
+            case 'circle':
+                const radius = Math.sqrt(
+                    Math.pow(pos.x - shapeStartX, 2) + 
+                    Math.pow(pos.y - shapeStartY, 2)
+                );
+                ctx.beginPath();
+                ctx.arc(shapeStartX, shapeStartY, radius, 0, Math.PI * 2);
+                ctx.stroke();
+                break;
+            case 'triangle':
+                const triangleWidth = pos.x - shapeStartX;
+                const triangleHeight = pos.y - shapeStartY;
+                ctx.beginPath();
+                ctx.moveTo(shapeStartX + triangleWidth/2, shapeStartY);
+                ctx.lineTo(shapeStartX, shapeStartY + triangleHeight);
+                ctx.lineTo(shapeStartX + triangleWidth, shapeStartY + triangleHeight);
+                ctx.closePath();
+                ctx.stroke();
+                break;
+            case 'line':
+                ctx.beginPath();
+                ctx.moveTo(shapeStartX, shapeStartY);
+                ctx.lineTo(pos.x, pos.y);
+                ctx.stroke();
+                break;
+        }
+    } else {
+        // Normal çizim işlemi
+        ctx.beginPath();
+        ctx.strokeStyle = rainbowMode ? `hsl(${rainbowIndex}, 100%, 50%)` : currentColor;
+        ctx.lineWidth = currentSize;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(pos.x, pos.y);
         ctx.stroke();
+
+        if (rainbowMode) {
+            rainbowIndex = (rainbowIndex + 1) % 360;
+        }
     }
 
-    lastPoint = pos;
-}
-
-function getRainbowColor() {
-    rainbowIndex = (rainbowIndex + 1) % colors.length;
-    return colors[rainbowIndex];
-}
-
-function drawShape(context, shape, startX, startY, endX, endY) {
-    context.beginPath();
-    context.strokeStyle = currentColor;
-    context.lineWidth = currentSize;
-    context.lineCap = 'round';
-    context.lineJoin = 'round';
-
-    switch (shape) {
-        case 'rect':
-            const width = endX - startX;
-            const height = endY - startY;
-            context.rect(startX, startY, width, height);
-            break;
-        case 'circle':
-            const radius = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
-            context.arc(startX, startY, radius, 0, Math.PI * 2);
-            break;
-        case 'triangle':
-            context.moveTo(startX, startY);
-            context.lineTo(endX, endY);
-            context.lineTo(startX - (endX - startX), endY);
-            context.closePath();
-            break;
-        case 'line':
-            context.moveTo(startX, startY);
-            context.lineTo(endX, endY);
-            break;
-    }
-    context.stroke();
+    lastX = pos.x;
+    lastY = pos.y;
 }
 
 function stopDrawing() {
     if (!isDrawing) return;
     isDrawing = false;
-    ctx.shadowBlur = 0;
 
     if (['rect', 'circle', 'triangle', 'line'].includes(currentTool)) {
-        // Son şekli çiz
-        drawShape(ctx, currentTool, lastPoint.x, lastPoint.y, lastPoint.x, lastPoint.y);
+        // Son şekli geçici canvas'a kaydet
+        tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+        tempCtx.drawImage(canvas, 0, 0);
     }
 }
-
-// Şekil çizme fonksiyonları
-function drawShape(e) {
-    if (!isDrawing) return;
-
-    const currentPos = getMousePos(canvas, e);
-    const startPos = lastPoint || currentPos;
-
-    // Geçici canvas'ta önceki şekli temizle
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCanvas.width = canvas.width;
-    tempCanvas.height = canvas.height;
-
-    // Mevcut canvas içeriğini kopyala
-    tempCtx.drawImage(canvas, 0, 0);
-    tempCtx.strokeStyle = currentColor;
-    tempCtx.lineWidth = currentSize;
-    tempCtx.lineCap = 'round';
-    tempCtx.lineJoin = 'round';
-
-    switch(currentTool) {
-        case 'rect':
-            drawRect(tempCtx, startPos, currentPos);
-            break;
-        case 'circle':
-            drawCircle(tempCtx, startPos, currentPos);
-            break;
-        case 'triangle':
-            drawTriangle(tempCtx, startPos, currentPos);
-            break;
-        case 'line':
-            drawLine(tempCtx, startPos, currentPos);
-            break;
-    }
-
-    // Ana canvas'ı temizle ve geçici canvas'ı kopyala
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (backgroundImage) {
-        ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
-    }
-    ctx.drawImage(tempCanvas, 0, 0);
-}
-
-function drawRect(ctx, start, end) {
-    const width = end.x - start.x;
-    const height = end.y - start.y;
-    ctx.beginPath();
-    ctx.rect(start.x, start.y, width, height);
-    ctx.stroke();
-}
-
-function drawCircle(ctx, start, end) {
-    const radius = Math.sqrt(Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2));
-    ctx.beginPath();
-    ctx.arc(start.x, start.y, radius, 0, Math.PI * 2);
-    ctx.stroke();
-}
-
-function drawTriangle(ctx, start, end) {
-    const width = end.x - start.x;
-    const height = end.y - start.y;
-    ctx.beginPath();
-    ctx.moveTo(start.x + width/2, start.y);
-    ctx.lineTo(start.x, start.y + height);
-    ctx.lineTo(start.x + width, start.y + height);
-    ctx.closePath();
-    ctx.stroke();
-}
-
-function drawLine(ctx, start, end) {
-    ctx.beginPath();
-    ctx.moveTo(start.x, start.y);
-    ctx.lineTo(end.x, end.y);
-    ctx.stroke();
-}
-
-// Boyut seçimi
-document.querySelectorAll('.size-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentSize = parseInt(btn.dataset.size);
-    });
-});
 
 // Yardımcı fonksiyonlar
 function getMousePos(canvas, evt) {
