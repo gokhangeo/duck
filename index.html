@@ -82,18 +82,38 @@
         }
 
         .tool-btn {
-            width: 40px;
-            height: 40px;
+            width: 45px;
+            height: 45px;
             border: none;
             border-radius: 8px;
             background-color: rgba(255, 255, 255, 0.1);
             color: #fff;
             cursor: pointer;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
+            gap: 4px;
             transition: all 0.2s ease;
-            font-size: 18px;
+            padding: 8px;
+            position: relative;
+        }
+
+        .tool-btn i {
+            font-size: 20px;
+        }
+
+        .tool-btn span {
+            font-size: 10px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            position: absolute;
+            bottom: -18px;
+            white-space: nowrap;
+        }
+
+        #sidebar.expanded .tool-btn span {
+            opacity: 1;
         }
 
         .tool-btn:hover {
@@ -106,15 +126,30 @@
             box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
         }
 
-        .group-title {
+        .size-btn {
+            width: 45px;
+            height: 45px;
+            border: none;
+            border-radius: 8px;
+            background-color: rgba(255, 255, 255, 0.1);
             color: #fff;
-            font-size: 14px;
-            text-align: center;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            width: 100%;
-            opacity: 0.9;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+
+        .size-btn:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .size-btn.active {
+            background-color: rgba(255, 255, 255, 0.25);
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
         }
 
         #color-palette {
@@ -147,31 +182,6 @@
             border-color: #fff;
             transform: scale(1.1);
             box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
-        }
-
-        .size-btn {
-            width: 40px;
-            height: 40px;
-            border: none;
-            border-radius: 8px;
-            background-color: rgba(255, 255, 255, 0.1);
-            color: #fff;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            font-weight: bold;
-            transition: all 0.2s ease;
-        }
-
-        .size-btn:hover {
-            background-color: rgba(255, 255, 255, 0.2);
-        }
-
-        .size-btn.active {
-            background-color: rgba(255, 255, 255, 0.25);
-            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
         }
 
         #toggle-sidebar {
@@ -303,15 +313,19 @@
                 <div class="group-title">Araçlar</div>
                 <button id="brush-tool" class="tool-btn active" title="Fırça">
                     <i class="fas fa-paint-brush"></i>
+                    <span>Fırça</span>
                 </button>
                 <button id="eraser-tool" class="tool-btn" title="Silgi">
                     <i class="fas fa-eraser"></i>
+                    <span>Silgi</span>
                 </button>
                 <button id="rainbow-tool" class="tool-btn" title="Gökkuşağı">
                     <i class="fas fa-rainbow"></i>
+                    <span>Gökkuşağı</span>
                 </button>
                 <button id="party-tool" class="tool-btn" title="Parti">
                     <i class="fas fa-star"></i>
+                    <span>Parti</span>
                 </button>
             </div>
 
@@ -319,15 +333,19 @@
                 <div class="group-title">Şekiller</div>
                 <button id="rect-tool" class="tool-btn" title="Dikdörtgen">
                     <i class="fas fa-square"></i>
+                    <span>Dikdörtgen</span>
                 </button>
                 <button id="circle-tool" class="tool-btn" title="Daire">
                     <i class="fas fa-circle"></i>
+                    <span>Daire</span>
                 </button>
                 <button id="triangle-tool" class="tool-btn" title="Üçgen">
                     <i class="fas fa-play" style="transform: rotate(90deg);"></i>
+                    <span>Üçgen</span>
                 </button>
                 <button id="line-tool" class="tool-btn" title="Çizgi">
                     <i class="fas fa-minus" style="transform: rotate(45deg);"></i>
+                    <span>Çizgi</span>
                 </button>
             </div>
 
@@ -338,21 +356,24 @@
 
             <div class="tool-group">
                 <div class="group-title">Boyut</div>
-                <button class="size-btn active" data-size="3">S</button>
-                <button class="size-btn" data-size="8">M</button>
-                <button class="size-btn" data-size="15">L</button>
+                <button class="size-btn active" data-size="5">S</button>
+                <button class="size-btn" data-size="15">M</button>
+                <button class="size-btn" data-size="30">L</button>
             </div>
 
             <div class="tool-group">
                 <div class="group-title">İşlemler</div>
                 <button id="clear-btn" class="tool-btn" title="Temizle">
                     <i class="fas fa-trash"></i>
+                    <span>Temizle</span>
                 </button>
                 <button id="save-btn" class="tool-btn" title="Kaydet">
                     <i class="fas fa-save"></i>
+                    <span>Kaydet</span>
                 </button>
                 <label for="file-input" class="tool-btn" title="Resim Yükle">
                     <i class="fas fa-upload"></i>
+                    <span>Yükle</span>
                 </label>
                 <input type="file" id="file-input" accept="image/*" style="display: none;">
             </div>

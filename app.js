@@ -11,6 +11,7 @@ let lastPoint;
 let partyMode = false;
 let rainbowMode = false;
 let rainbowIndex = 0;
+let currentBackgroundImage = null;
 
 // Renk paleti
 const colors = [
@@ -92,6 +93,7 @@ function loadBackgroundImage(url) {
         
         // Resmi kaydet
         backgroundImage = img;
+        currentBackgroundImage = url;
     };
     img.src = url;
 }
@@ -136,17 +138,36 @@ function resizeCanvas() {
 window.addEventListener('resize', resizeCanvas);
 window.addEventListener('load', resizeCanvas);
 
-// Temizle butonu
-document.getElementById('clear-btn').addEventListener('click', () => {
-    const canvas = document.getElementById('drawing-canvas');
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Eğer bir arkaplan resmi varsa, onu tekrar çiz
-    if (backgroundImage) {
-        ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+// Temizle fonksiyonu
+function clearCanvas() {
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+
+    if (currentBackgroundImage) {
+        const img = new Image();
+        img.src = currentBackgroundImage;
+        img.onload = () => {
+            // Canvas'ı temizle
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Arkaplan resmini tekrar çiz
+            const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+            const x = (canvas.width - img.width * scale) / 2;
+            const y = (canvas.height - img.height * scale) / 2;
+            ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+        };
+    } else {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
-});
+
+    isDrawing = false;
+    partyMode = false;
+    partyInterval && clearInterval(partyInterval);
+}
+
+document.getElementById('clear-btn').addEventListener('click', clearCanvas);
 
 // Araç butonları
 document.getElementById('brush-tool').addEventListener('click', () => setTool('brush'));
@@ -205,8 +226,6 @@ function draw(e) {
     if (['rect', 'circle', 'triangle', 'line'].includes(currentTool)) {
         // Şekil önizlemesi için geçici canvas kullan
         const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = canvas.height;
         const tempCtx = tempCanvas.getContext('2d');
 
         // Mevcut canvas içeriğini kopyala
@@ -293,6 +312,91 @@ function stopDrawing() {
         drawShape(ctx, currentTool, lastPoint.x, lastPoint.y, lastPoint.x, lastPoint.y);
     }
 }
+
+// Şekil çizme fonksiyonları
+function drawShape(e) {
+    if (!isDrawing) return;
+
+    const currentPos = getMousePos(canvas, e);
+    const startPos = lastPoint || currentPos;
+
+    // Geçici canvas'ta önceki şekli temizle
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+
+    // Mevcut canvas içeriğini kopyala
+    tempCtx.drawImage(canvas, 0, 0);
+    tempCtx.strokeStyle = currentColor;
+    tempCtx.lineWidth = currentSize;
+    tempCtx.lineCap = 'round';
+    tempCtx.lineJoin = 'round';
+
+    switch(currentTool) {
+        case 'rect':
+            drawRect(tempCtx, startPos, currentPos);
+            break;
+        case 'circle':
+            drawCircle(tempCtx, startPos, currentPos);
+            break;
+        case 'triangle':
+            drawTriangle(tempCtx, startPos, currentPos);
+            break;
+        case 'line':
+            drawLine(tempCtx, startPos, currentPos);
+            break;
+    }
+
+    // Ana canvas'ı temizle ve geçici canvas'ı kopyala
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (backgroundImage) {
+        ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+    }
+    ctx.drawImage(tempCanvas, 0, 0);
+}
+
+function drawRect(ctx, start, end) {
+    const width = end.x - start.x;
+    const height = end.y - start.y;
+    ctx.beginPath();
+    ctx.rect(start.x, start.y, width, height);
+    ctx.stroke();
+}
+
+function drawCircle(ctx, start, end) {
+    const radius = Math.sqrt(Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2));
+    ctx.beginPath();
+    ctx.arc(start.x, start.y, radius, 0, Math.PI * 2);
+    ctx.stroke();
+}
+
+function drawTriangle(ctx, start, end) {
+    const width = end.x - start.x;
+    const height = end.y - start.y;
+    ctx.beginPath();
+    ctx.moveTo(start.x + width/2, start.y);
+    ctx.lineTo(start.x, start.y + height);
+    ctx.lineTo(start.x + width, start.y + height);
+    ctx.closePath();
+    ctx.stroke();
+}
+
+function drawLine(ctx, start, end) {
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y);
+    ctx.lineTo(end.x, end.y);
+    ctx.stroke();
+}
+
+// Boyut seçimi
+document.querySelectorAll('.size-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentSize = parseInt(btn.dataset.size);
+    });
+});
 
 // Yardımcı fonksiyonlar
 function getMousePos(canvas, evt) {
