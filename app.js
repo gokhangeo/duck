@@ -400,7 +400,19 @@ document.querySelectorAll('.size-btn').forEach(btn => {
 
 // Temizle butonu
 document.getElementById('clear-btn').addEventListener('click', () => {
+    // Geçici canvas oluştur
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+    const tempCtx = tempCanvas.getContext('2d');
+
+    // Mevcut canvas içeriğini geçici canvas'a kopyala
+    tempCtx.drawImage(canvas, 0, 0);
+
+    // Ana canvas'ı temizle
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Şekilleri sıfırla
     shapes = [];
 });
 

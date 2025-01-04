@@ -2,58 +2,47 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gizem Elgül Boyama Defteri</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#FF69B4">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Boyama Defteri">
-    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
-    <meta name="description" content="Çocuklar için eğlenceli boyama uygulaması">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            touch-action: none;
-            user-select: none;
-            -webkit-user-select: none;
         }
 
         body {
-            width: 100vw;
-            height: 100vh;
+            font-family: Arial, sans-serif;
             overflow: hidden;
-            display: flex;
-            flex-direction: column;
             background: #f0f0f0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: none;
         }
 
         #header {
-            background: linear-gradient(135deg, #FF69B4, #FFB6C1);
+            background: #FF69B4;
             color: white;
             text-align: center;
             padding: 10px;
             font-size: 1.2em;
             font-weight: bold;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            z-index: 1000;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
         }
 
         #main-container {
-            flex: 1;
             display: flex;
-            position: relative;
-            overflow: hidden;
+            height: calc(100vh - 40px);
+            margin-top: 40px;
         }
 
         #canvas-container {
             flex: 1;
-            position: relative;
             background: white;
+            position: relative;
             overflow: hidden;
         }
 
@@ -61,51 +50,86 @@
             position: absolute;
             top: 0;
             left: 0;
+            width: 100%;
+            height: 100%;
             touch-action: none;
-            cursor: crosshair;
+        }
+
+        #toggle-sidebar {
+            position: fixed;
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+            background: #FF69B4;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: transform 0.3s;
+        }
+
+        #toggle-sidebar.collapsed {
+            transform: translateY(-50%) rotate(180deg);
         }
 
         #sidebar {
-            width: 280px;
-            height: 100%;
+            width: 300px;
             background: white;
-            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+            padding: 10px;
             overflow-y: auto;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            transition: transform 0.3s ease;
+            transition: transform 0.3s;
+            position: fixed;
+            top: 40px;
+            right: 0;
+            bottom: 0;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+            z-index: 90;
+        }
+
+        #sidebar.collapsed {
+            transform: translateX(100%);
         }
 
         .panel {
             background: #f8f8f8;
             border-radius: 10px;
-            padding: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            padding: 15px;
+            margin-bottom: 15px;
         }
 
         .panel-title {
-            font-size: 14px;
             font-weight: bold;
-            color: #666;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
+            color: #333;
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 8px;
+        }
+
+        .panel-title i {
+            color: #FF69B4;
         }
 
         .color-palette {
             display: grid;
-            grid-template-columns: repeat(6, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             gap: 5px;
+            margin-bottom: 10px;
         }
 
         .color-btn {
-            width: 30px;
-            height: 30px;
+            width: 100%;
+            aspect-ratio: 1;
             border: 2px solid #ddd;
-            border-radius: 50%;
+            border-radius: 5px;
             cursor: pointer;
             transition: transform 0.2s;
         }
@@ -115,7 +139,7 @@
         }
 
         .color-btn.active {
-            border-color: #333;
+            border-color: #FF69B4;
             transform: scale(1.1);
         }
 
@@ -127,43 +151,43 @@
 
         .tool-btn {
             padding: 8px;
-            background: #FF69B4;
-            color: white;
             border: none;
-            border-radius: 20px;
+            border-radius: 5px;
+            background: #f0f0f0;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 5px;
-            font-size: 12px;
             transition: all 0.2s;
-            white-space: nowrap;
         }
 
         .tool-btn:hover {
-            background: #FF1493;
-            transform: translateY(-1px);
+            background: #e0e0e0;
         }
 
         .tool-btn.active {
-            background: #FF1493;
-            box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+            background: #FF69B4;
+            color: white;
+        }
+
+        .tool-btn i {
+            font-size: 1.2em;
         }
 
         .size-buttons {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
+            display: flex;
+            justify-content: space-between;
             gap: 5px;
         }
 
         .size-btn {
-            padding: 5px;
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 5px;
             background: #f0f0f0;
-            border: 1px solid #ddd;
-            border-radius: 15px;
             cursor: pointer;
-            font-size: 11px;
             transition: all 0.2s;
         }
 
@@ -174,96 +198,97 @@
         .size-btn.active {
             background: #FF69B4;
             color: white;
-            border-color: #FF1493;
         }
 
         .action-btn {
             width: 100%;
-            padding: 8px;
-            color: white;
+            padding: 10px;
             border: none;
-            border-radius: 20px;
+            border-radius: 5px;
+            background: #FF69B4;
+            color: white;
             cursor: pointer;
-            font-size: 12px;
-            transition: all 0.2s;
             margin-top: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            transition: background 0.2s;
         }
 
-        #clear-btn {
-            background: #FF4B4B;
+        .action-btn:hover {
+            background: #ff4da6;
         }
 
-        #save-btn {
-            background: #4CAF50;
+        #upload-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            padding: 10px;
+            background: #FF69B4;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 5px;
+            transition: background 0.2s;
+        }
+
+        #upload-label:hover {
+            background: #ff4da6;
         }
 
         #file-input {
             display: none;
         }
 
-        #upload-label {
-            display: block;
-            width: 100%;
-            padding: 8px;
-            background: #2196F3;
-            color: white;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 12px;
-            text-align: center;
-            transition: all 0.2s;
-            margin-top: 5px;
-        }
-
-        #toggle-sidebar {
-            display: none;
-            position: fixed;
-            right: 10px;
-            top: 60px;
-            background: #FF69B4;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            z-index: 1001;
-        }
-
         @media (max-width: 768px) {
-            #toggle-sidebar {
-                display: flex;
+            #sidebar {
+                width: 100%;
+                height: 60%;
+                bottom: 0;
+                top: auto;
+                transform: translateY(100%);
             }
 
-            #sidebar {
-                position: fixed;
-                right: 0;
-                top: 0;
-                bottom: 0;
-                transform: translateX(100%);
-                z-index: 1000;
-                padding-top: 60px;
+            #sidebar.collapsed {
+                transform: translateY(100%);
             }
 
             #sidebar.show {
-                transform: translateX(0);
+                transform: translateY(0);
             }
 
-            .color-btn {
-                width: 25px;
-                height: 25px;
+            #toggle-sidebar {
+                bottom: 10px;
+                top: auto;
+                right: 10px;
+                transform: none;
             }
 
-            .tool-btn {
-                padding: 6px;
-                font-size: 11px;
+            #toggle-sidebar.collapsed {
+                transform: rotate(180deg);
+            }
+
+            .tool-group {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .color-palette {
+                grid-template-columns: repeat(6, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .tool-group {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .color-palette {
+                grid-template-columns: repeat(5, 1fr);
             }
         }
     </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
     <div id="header">GİZEM ELGÜL BOYAMA DEFTERİ</div>
@@ -365,7 +390,7 @@
                     Dosya İşlemleri
                 </div>
                 <div class="tool-group">
-                    <label id="upload-label" for="file-input">
+                    <label id="upload-label" for="file-input" class="action-btn">
                         <i class="fas fa-upload"></i> Resim Yükle
                     </label>
                     <input type="file" id="file-input" accept="image/*">
@@ -379,49 +404,6 @@
             </div>
         </div>
     </div>
-
-    <script>
-        // PWA Kurulum Kontrolü
-        let deferredPrompt;
-        const installPrompt = document.getElementById('install-prompt');
-        const installButton = document.getElementById('install-btn');
-        const closePrompt = document.getElementById('close-prompt');
-
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            installPrompt.style.display = 'block';
-        });
-
-        installButton.addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    console.log('Uygulama kuruldu');
-                }
-                deferredPrompt = null;
-                installPrompt.style.display = 'none';
-            }
-        });
-
-        closePrompt.addEventListener('click', () => {
-            installPrompt.style.display = 'none';
-        });
-
-        // Service Worker Kaydı
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js')
-                    .then(registration => {
-                        console.log('ServiceWorker başarıyla kaydedildi:', registration);
-                    })
-                    .catch(error => {
-                        console.error('ServiceWorker kaydı başarısız:', error);
-                    });
-            });
-        }
-    </script>
     <script src="app.js"></script>
 </body>
 </html>
