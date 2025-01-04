@@ -276,6 +276,95 @@ document.getElementById('save-btn').addEventListener('click', () => {
     link.click();
 });
 
+// Balon partisi değişkenleri
+let isPartyMode = false;
+let balloons = [];
+
+// Balon sınıfı
+class Balloon {
+    constructor() {
+        this.x = Math.random() * window.innerWidth;
+        this.y = window.innerHeight + 50;
+        this.size = 30 + Math.random() * 20;
+        this.color = `hsl(${Math.random() * 360}, 80%, 60%)`;
+        this.speedY = -2 - Math.random() * 2;
+        this.speedX = (Math.random() - 0.5) * 2;
+        this.element = document.createElement('div');
+        this.element.className = 'balloon';
+        this.element.style.width = `${this.size}px`;
+        this.element.style.height = `${this.size * 1.2}px`;
+        this.element.style.background = this.color;
+        this.element.style.borderRadius = '50% 50% 50% 50% / 60% 60% 40% 40%';
+        this.element.style.position = 'fixed';
+        this.element.style.left = `${this.x}px`;
+        this.element.style.top = `${this.y}px`;
+        document.body.appendChild(this.element);
+    }
+
+    update() {
+        this.y += this.speedY;
+        this.x += this.speedX;
+        this.element.style.left = `${this.x}px`;
+        this.element.style.top = `${this.y}px`;
+        return this.y < -50;
+    }
+
+    remove() {
+        this.element.remove();
+    }
+}
+
+// Balon partisi fonksiyonları
+function startParty() {
+    if (isPartyMode) return;
+    isPartyMode = true;
+    addBalloons();
+}
+
+function stopParty() {
+    isPartyMode = false;
+    balloons.forEach(balloon => balloon.remove());
+    balloons = [];
+}
+
+function addBalloons() {
+    if (!isPartyMode) return;
+    
+    const balloon = new Balloon();
+    balloons.push(balloon);
+    
+    // Balonları güncelle
+    balloons = balloons.filter(balloon => {
+        const shouldRemove = balloon.update();
+        if (shouldRemove) {
+            balloon.remove();
+            return false;
+        }
+        return true;
+    });
+    
+    if (balloons.length < 20) {
+        setTimeout(addBalloons, 500);
+    }
+    
+    requestAnimationFrame(() => {
+        if (isPartyMode) {
+            addBalloons();
+        }
+    });
+}
+
+// Parti butonu event listener'ı
+document.getElementById('party-btn').addEventListener('click', () => {
+    if (isPartyMode) {
+        stopParty();
+        document.getElementById('party-btn').classList.remove('active');
+    } else {
+        startParty();
+        document.getElementById('party-btn').classList.add('active');
+    }
+});
+
 // Başlangıç
 resizeCanvas();
 createColorPalette();

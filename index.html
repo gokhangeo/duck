@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Paper Duck - Boyama Uygulaması</title>
+    <title>Gizem Elgül - Boyama Defteri</title>
     <style>
         * {
             margin: 0;
@@ -21,7 +21,18 @@
             display: flex;
             flex-direction: column;
             background: #f0f0f0;
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #header {
+            background: linear-gradient(135deg, #FF69B4, #FFB6C1);
+            color: white;
+            text-align: center;
+            padding: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
 
         #canvas-container {
@@ -42,21 +53,23 @@
         #toolbar {
             width: 100%;
             background: white;
-            padding: 10px;
+            padding: 8px;
             box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
             z-index: 100;
+            max-height: 180px;
+            overflow-y: auto;
         }
 
         .color-palette {
             display: grid;
             grid-template-columns: repeat(10, 1fr);
-            gap: 5px;
-            margin-bottom: 10px;
+            gap: 4px;
+            margin-bottom: 8px;
         }
 
         .color-btn {
-            width: 30px;
-            height: 30px;
+            width: 25px;
+            height: 25px;
             border: 2px solid #ddd;
             border-radius: 50%;
             cursor: pointer;
@@ -75,97 +88,137 @@
         .tool-group {
             display: flex;
             flex-wrap: wrap;
-            gap: 5px;
-            margin-bottom: 10px;
+            gap: 4px;
+            margin-bottom: 8px;
         }
 
         .tool-btn {
             flex: 1;
-            min-width: 80px;
-            padding: 8px;
-            background: #4CAF50;
+            min-width: 60px;
+            padding: 6px;
+            background: #FF69B4;
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 20px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 5px;
-            font-size: 14px;
+            font-size: 12px;
+            transition: all 0.2s;
         }
 
         .tool-btn.active {
-            background: #45a049;
+            background: #FF1493;
             box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
         }
 
         .tool-btn:hover {
-            background: #45a049;
+            background: #FF1493;
+            transform: translateY(-1px);
         }
 
         .size-buttons {
             display: flex;
             flex-wrap: wrap;
-            gap: 5px;
-            margin-bottom: 10px;
+            gap: 4px;
         }
 
         .size-btn {
             flex: 1;
-            min-width: 50px;
-            padding: 5px;
-            background: #f0f0f0;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+            min-width: 40px;
+            padding: 4px;
+            background: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 15px;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 11px;
+            transition: all 0.2s;
         }
 
         .size-btn:hover {
-            background: #e0e0e0;
+            background: #f0f0f0;
         }
 
         .size-btn.active {
-            background: #4CAF50;
+            background: #FF69B4;
             color: white;
-            border-color: #45a049;
+            border-color: #FF1493;
         }
 
         .nav-btn {
             flex: 1;
-            padding: 8px;
-            background: #2196F3;
+            padding: 6px;
+            background: #4A90E2;
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 20px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 12px;
+            transition: all 0.2s;
         }
 
         .nav-btn:hover {
-            background: #1976D2;
+            background: #357ABD;
+            transform: translateY(-1px);
         }
 
         #bottom-buttons {
             display: flex;
-            gap: 5px;
-            margin-top: 10px;
+            gap: 4px;
+            margin-top: 8px;
         }
 
         .action-btn {
             flex: 1;
-            padding: 8px;
-            background: #4CAF50;
+            padding: 6px;
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 20px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 12px;
+            transition: all 0.2s;
         }
 
         #clear-btn {
-            background: #f44336;
+            background: #FF4B4B;
+        }
+
+        #clear-btn:hover {
+            background: #E43535;
+        }
+
+        #save-btn {
+            background: #4CAF50;
+        }
+
+        #save-btn:hover {
+            background: #45a049;
+        }
+
+        #party-btn {
+            background: #9C27B0;
+        }
+
+        #party-btn:hover {
+            background: #7B1FA2;
+        }
+
+        .balloon {
+            position: fixed;
+            pointer-events: none;
+            z-index: 1000;
+            animation: float 4s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-20px);
+            }
         }
 
         @media (max-width: 600px) {
@@ -174,30 +227,37 @@
             }
 
             .tool-btn, .nav-btn, .action-btn {
-                padding: 6px;
-                font-size: 12px;
-                min-width: 60px;
+                padding: 5px;
+                font-size: 11px;
+                min-width: 50px;
             }
 
             .size-btn {
-                padding: 4px;
-                font-size: 11px;
-                min-width: 40px;
+                padding: 3px;
+                font-size: 10px;
+                min-width: 35px;
             }
 
             #toolbar {
-                padding: 5px;
+                padding: 4px;
+                max-height: 160px;
             }
 
             .tool-group {
                 gap: 3px;
-                margin-bottom: 5px;
+                margin-bottom: 4px;
+            }
+
+            #header {
+                font-size: 1em;
+                padding: 8px;
             }
         }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
+    <div id="header">GİZEM ELGÜL BOYAMA DEFTERİ</div>
     <div id="canvas-container">
         <canvas id="drawing-canvas"></canvas>
     </div>
@@ -215,6 +275,9 @@
             </button>
             <button id="fill-tool" class="tool-btn">
                 <i class="fas fa-fill-drip"></i> Boyama
+            </button>
+            <button id="party-btn" class="tool-btn">
+                <i class="fas fa-birthday-cake"></i> Parti
             </button>
         </div>
 
