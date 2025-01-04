@@ -316,12 +316,27 @@ window.addEventListener('resize', resizeCanvas);
 // Sidebar toggle
 document.getElementById('toggle-sidebar').addEventListener('click', function() {
     const sidebar = document.getElementById('sidebar');
-    sidebar.classList.toggle('collapsed');
-    this.classList.toggle('collapsed');
+    const toggleBtn = document.getElementById('toggle-sidebar');
+    
+    sidebar.classList.toggle('expanded');
+    toggleBtn.classList.toggle('expanded');
+    
+    // Mobil görünümde
+    if (window.innerWidth <= 768) {
+        sidebar.classList.toggle('show');
+    }
 });
 
-// Mobil menü
-document.getElementById('toggle-sidebar').addEventListener('click', function() {
+// Menü dışına tıklandığında menüyü kapat (sadece mobilde)
+document.addEventListener('click', function(e) {
     const sidebar = document.getElementById('sidebar');
-    sidebar.classList.toggle('show');
+    const toggleBtn = document.getElementById('toggle-sidebar');
+    
+    if (window.innerWidth <= 768 && 
+        !sidebar.contains(e.target) && 
+        !toggleBtn.contains(e.target)) {
+        sidebar.classList.remove('show');
+        sidebar.classList.remove('expanded');
+        toggleBtn.classList.remove('expanded');
+    }
 });
