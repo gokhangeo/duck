@@ -6,8 +6,6 @@
     <title>Gizem'in Boyama Sayfası</title>
     <link rel="icon" href="icon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- pdf.js kütüphanesi -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -289,13 +287,13 @@
         let shapeStartY = 0;
         let shapeSize = 50;
 
-        // GitHub'dan PDF dosyaları (örnek URL'ler, kendi deponu güncelleyeceksin)
+        // GitHub'dan PNG görseller
         const images = [
-            'https://raw.githubusercontent.com/kullaniciadi/depoadi/main/images/bear.pdf',
-            'https://raw.githubusercontent.com/kullaniciadi/depoadi/main/images/bunny.pdf',
-            'https://raw.githubusercontent.com/kullaniciadi/depoadi/main/images/cat.pdf',
-            'https://raw.githubusercontent.com/kullaniciadi/depoadi/main/images/dog.pdf',
-            'https://raw.githubusercontent.com/kullaniciadi/depoadi/main/images/duck.pdf'
+            'https://raw.githubusercontent.com/showman1907/duck/main/images/bear.png',
+            'https://raw.githubusercontent.com/showman1907/duck/main/images/bunny.png',
+            'https://raw.githubusercontent.com/showman1907/duck/main/images/cat.png',
+            'https://raw.githubusercontent.com/showman1907/duck/main/images/dog.png',
+            'https://raw.githubusercontent.com/showman1907/duck/main/images/duck.png'
         ];
         let currentImageIndex = 0;
 
@@ -499,28 +497,15 @@
             }
         });
 
-        async function loadImage(src, redraw = true) {
-            try {
-                const response = await fetch(src);
-                const arrayBuffer = await response.arrayBuffer();
-                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-                const page = await pdf.getPage(1); // İlk sayfayı al
-                const viewport = page.getViewport({ scale: 1.5 });
-                const tempCanvas = document.createElement('canvas');
-                const tempCtx = tempCanvas.getContext('2d');
-                tempCanvas.width = viewport.width;
-                tempCanvas.height = viewport.height;
-
-                await page.render({
-                    canvasContext: tempCtx,
-                    viewport: viewport
-                }).promise;
-
+        function loadImage(src, redraw = true) {
+            const img = new Image();
+            img.crossOrigin = "Anonymous"; // CORS için
+            img.onload = () => {
                 if (redraw) ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(tempCanvas, 0, 0, canvas.width, canvas.height);
-            } catch (error) {
-                console.error(`PDF yüklenemedi: ${src}`, error);
-            }
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            };
+            img.onerror = () => console.error(`Görsel yüklenemedi: ${src}`);
+            img.src = src;
         }
 
         prevImageBtn.addEventListener('click', () => {
