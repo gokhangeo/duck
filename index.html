@@ -287,13 +287,13 @@
         let shapeStartY = 0;
         let shapeSize = 50;
 
-        // GitHub'dan PNG görseller
+        // Burada GitHub'daki RAW PNG linklerinizi dizinize ekleyin:
         const images = [
-            'https://raw.githubusercontent.com/showman1907/duck/main/images/bear.png',
-            'https://raw.githubusercontent.com/showman1907/duck/main/images/bunny.png',
-            'https://raw.githubusercontent.com/showman1907/duck/main/images/cat.png',
-            'https://raw.githubusercontent.com/showman1907/duck/main/images/dog.png',
-            'https://raw.githubusercontent.com/showman1907/duck/main/images/duck.png'
+            'https://raw.githubusercontent.com/showman1907/duck/542e7a1d30e3aed0a60a8de66512da851295fda1/images/bear.png',
+            'https://raw.githubusercontent.com/showman1907/duck/542e7a1d30e3aed0a60a8de66512da851295fda1/images/bunny.png',
+            'https://raw.githubusercontent.com/showman1907/duck/542e7a1d30e3aed0a60a8de66512da851295fda1/images/cat.png',
+            'https://raw.githubusercontent.com/showman1907/duck/542e7a1d30e3aed0a60a8de66512da851295fda1/images/dog.png',
+            'https://raw.githubusercontent.com/showman1907/duck/542e7a1d30e3aed0a60a8de66512da851295fda1/images/duck.png'
         ];
         let currentImageIndex = 0;
 
@@ -397,9 +397,16 @@
                 ctx.lineJoin = 'round';
 
                 switch (currentTool) {
-                    case 'brush': ctx.strokeStyle = currentColor; break;
-                    case 'eraser': ctx.strokeStyle = '#ffffff'; break;
-                    case 'rainbow': ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`; hue = (hue + 1) % 360; break;
+                    case 'brush': 
+                        ctx.strokeStyle = currentColor;
+                        break;
+                    case 'eraser': 
+                        ctx.strokeStyle = '#ffffff';
+                        break;
+                    case 'rainbow': 
+                        ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+                        hue = (hue + 1) % 360;
+                        break;
                 }
                 ctx.stroke();
                 [lastX, lastY] = [e.clientX, e.clientY];
