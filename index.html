@@ -263,8 +263,7 @@
         let shapeSize = 50;
 
         // ===== Burada images dizisini manuel tanımlıyoruz (raw linklerle) =====
-        // Dilerseniz branch'i veya commit'i değiştirebilirsiniz.
-        // Aşağıda "main" branch'i kullanılmıştır.
+        // Kendi resimlerinizi ekleyebilirsiniz.
         const images = [
             'https://raw.githubusercontent.com/showman1907/duck/main/images/9c4bpMqyi-1.png',
             'https://raw.githubusercontent.com/showman1907/duck/main/images/BzTxrecBR-1.png',
@@ -499,13 +498,28 @@
             }
         });
 
-        // Seçili resmi canvas'a yükleme fonksiyonu
+        // Seçili resmi canvas'a yükleme (orantılı şekilde) fonksiyonu
         function loadImage(src, redraw = true) {
             const img = new Image();
             img.crossOrigin = 'Anonymous';
             img.onload = () => {
                 if (redraw) ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                // 1) Görselin orijinal boyutları
+                const imgWidth = img.width;
+                const imgHeight = img.height;
+
+                // 2) Scale hesabı: görseli canvas’a sığdırırken orantıyı koru
+                const scale = Math.min(canvas.width / imgWidth, canvas.height / imgHeight);
+                const newWidth = imgWidth * scale;
+                const newHeight = imgHeight * scale;
+
+                // 3) Ortalamak için offset
+                const offsetX = (canvas.width - newWidth) / 2;
+                const offsetY = (canvas.height - newHeight) / 2;
+
+                // 4) Resmi çiz
+                ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
             };
             img.onerror = () => console.error('Görsel yüklenemedi:', src);
             img.src = src;
