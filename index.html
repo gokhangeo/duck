@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Paper Duck - Boyama Uygulaması</title>
+    <title>Gizem'in Boyama Sayfası</title>
     <link rel="icon" href="icon.svg" type="image/svg+xml">
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#ffffff">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- pdf.js kütüphanesi -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -16,9 +16,9 @@
         }
 
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Arial, sans-serif;
             overflow: hidden;
-            background-color: #f0f0f0;
+            background-color: #e9ecef;
             touch-action: none;
         }
 
@@ -28,265 +28,191 @@
             position: relative;
         }
 
-        #sidebar {
-            width: 0;
-            background-color: rgba(80, 80, 80, 0.85);
-            backdrop-filter: blur(10px);
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            transition: all 0.3s ease;
-            z-index: 1000;
+        #toolbar {
             position: fixed;
-            right: 0;
             top: 0;
-            height: 100vh;
-            overflow-y: auto;
-            overflow-x: hidden;
-        }
-
-        #sidebar::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        #sidebar::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        #sidebar::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 3px;
-        }
-
-        #sidebar.expanded {
-            width: 220px;
-            padding: 15px;
-        }
-
-        .tool-group {
+            left: 0;
+            width: 70px;
+            height: 100%;
+            background: linear-gradient(135deg, #ff6f61, #ff9f1c);
+            padding: 15px 0;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 8px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding-bottom: 12px;
+            gap: 15px;
+            transition: width 0.3s ease;
+            z-index: 1000;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+        }
+
+        #toolbar:hover {
+            width: 200px;
+        }
+
+        .tool-item {
             width: 100%;
-            min-height: fit-content;
-        }
-
-        .tool-group:last-child {
-            border-bottom: none;
-            padding-bottom: 0;
-            margin-bottom: 15px;
-        }
-
-        .tool-btn {
-            width: 50px;
-            height: 50px;
+            padding: 10px;
+            background: none;
             border: none;
-            border-radius: 8px;
-            background-color: rgba(255, 255, 255, 0.1);
             color: #fff;
             cursor: pointer;
             display: flex;
-            flex-direction: column;
             align-items: center;
-            justify-content: center;
-            gap: 4px;
+            gap: 10px;
             transition: all 0.2s ease;
-            padding: 8px;
-            margin-bottom: 20px;
         }
 
-        .tool-btn i {
-            font-size: 24px;
-            margin-bottom: 5px;
+        .tool-item i {
+            font-size: 20px;
+            width: 20px;
         }
 
-        .tool-btn span {
-            font-size: 12px;
-            text-align: center;
-            white-space: nowrap;
+        .tool-item span {
+            font-size: 14px;
             opacity: 0;
             transition: opacity 0.2s ease;
         }
 
-        #sidebar.expanded .tool-btn span {
+        #toolbar:hover .tool-item span {
             opacity: 1;
         }
 
-        .tool-btn:hover {
-            background-color: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
+        .tool-item:hover, .tool-item.active {
+            background: rgba(255, 255, 255, 0.2);
+            color: #ffeaa7;
         }
 
-        .tool-btn.active {
-            background-color: rgba(255, 255, 255, 0.25);
-            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+        #sub-menu {
+            position: fixed;
+            top: 0;
+            left: 70px;
+            width: 0;
+            height: 100%;
+            background: rgba(255, 111, 97, 0.95);
+            padding: 15px 0;
+            transition: width 0.3s ease;
+            overflow: hidden;
+            z-index: 999;
         }
 
-        .size-btn {
-            width: 50px;
-            height: 50px;
-            border: none;
-            border-radius: 8px;
-            background-color: rgba(255, 255, 255, 0.1);
+        #sub-menu.active {
+            width: 220px;
+            padding: 15px;
+        }
+
+        .sub-section {
+            margin-bottom: 20px;
             color: #fff;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            font-weight: bold;
-            transition: all 0.2s ease;
+        }
+
+        .sub-section h3 {
+            font-size: 14px;
             margin-bottom: 10px;
+            color: #ffeaa7;
         }
 
-        .size-btn:hover {
-            background-color: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
-        }
-
-        .size-btn.active {
-            background-color: rgba(255, 255, 255, 0.25);
-            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
-        }
-
-        #color-palette {
+        #color-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 6px;
-            padding: 8px;
-            background-color: rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-            width: 100%;
-            min-height: fit-content;
+            gap: 8px;
         }
 
-        .color-btn {
-            width: 35px;
-            height: 35px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
+        .color-option {
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
+            border: 2px solid transparent;
             cursor: pointer;
             transition: all 0.2s ease;
-            position: relative;
         }
 
-        .color-btn:hover {
+        .color-option:hover, .color-option.active {
+            border-color: #ffeaa7;
             transform: scale(1.1);
-            border-color: rgba(255, 255, 255, 0.8);
         }
 
-        .color-btn.active {
-            border-color: #fff;
-            transform: scale(1.1);
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
-        }
-
-        #toggle-sidebar {
-            position: fixed;
-            right: 20px;
-            top: 20px;
-            width: 40px;
-            height: 40px;
+        .size-option {
+            width: 100%;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
             border: none;
-            border-radius: 8px;
-            background-color: rgba(80, 80, 80, 0.85);
-            backdrop-filter: blur(10px);
             color: #fff;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-            z-index: 1100;
-            font-size: 18px;
-        }
-
-        #toggle-sidebar:hover {
-            background-color: rgba(100, 100, 100, 0.9);
-            transform: scale(1.1);
-        }
-
-        #toggle-sidebar.expanded {
-            right: 240px;
-        }
-
-        #image-controls {
-            position: fixed;
-            right: 20px;
-            bottom: 20px;
-            display: flex;
-            gap: 10px;
-            z-index: 1100;
-        }
-
-        .image-btn {
-            width: 40px;
-            height: 40px;
-            border: none;
-            border-radius: 8px;
-            background-color: rgba(80, 80, 80, 0.85);
-            backdrop-filter: blur(10px);
-            color: #fff;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            text-align: center;
+            border-radius: 5px;
+            margin-bottom: 5px;
             transition: all 0.2s ease;
-            font-size: 18px;
         }
 
-        .image-btn:hover {
-            background-color: rgba(100, 100, 100, 0.9);
-            transform: scale(1.1);
+        .size-option:hover, .size-option.active {
+            background: #ffeaa7;
+            color: #ff6f61;
         }
 
         #canvas-container {
             position: fixed;
             top: 0;
             left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #fff;
+            width: 100%;
+            height: 100%;
+            background: #fff;
         }
 
         #drawing-canvas {
             width: 100%;
             height: 100%;
-            touch-action: none;
         }
 
-        /* Mobil Stil */
+        #image-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            border-radius: 20px;
+            display: flex;
+            gap: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .image-btn {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 50%;
+            background: #ff9f1c;
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .image-btn:hover {
+            background: #ff6f61;
+            transform: scale(1.1);
+        }
+
+        .party-effect {
+            position: absolute;
+            pointer-events: none;
+            animation: explode 1s ease-out forwards;
+            z-index: 500;
+        }
+
+        @keyframes explode {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
         @media (max-width: 768px) {
-            #sidebar {
-                width: 0;
-                height: 100%;
-            }
-
-            #sidebar.expanded {
-                width: 100%;
-            }
-
-            #toggle-sidebar.expanded {
-                right: 20px;
-            }
-
-            .tool-group {
-                padding: 10px 0;
-            }
-
-            #color-palette {
-                grid-template-columns: repeat(5, 1fr);
-                gap: 8px;
-            }
-
-            .color-btn {
-                width: 40px;
-                height: 40px;
-            }
+            #toolbar { width: 60px; }
+            #toolbar:hover { width: 150px; }
+            #sub-menu.active { width: 100%; left: 0; }
+            .image-btn { width: 35px; height: 35px; }
         }
     </style>
 </head>
@@ -296,93 +222,326 @@
             <canvas id="drawing-canvas"></canvas>
         </div>
 
-        <button id="toggle-sidebar" title="Menüyü Aç/Kapat">
-            <i class="fas fa-palette"></i>
-        </button>
-
-        <div id="image-controls">
-            <button id="prev-image" class="image-btn" title="Önceki Resim">
-                <i class="fas fa-chevron-left"></i>
-            </button>
-            <button id="next-image" class="image-btn" title="Sonraki Resim">
-                <i class="fas fa-chevron-right"></i>
-            </button>
+        <div id="toolbar">
+            <button class="tool-item active" data-tool="brush"><i class="fas fa-paint-brush"></i><span>Fırça</span></button>
+            <button class="tool-item" data-tool="eraser"><i class="fas fa-eraser"></i><span>Silgi</span></button>
+            <button class="tool-item" data-tool="rainbow"><i class="fas fa-rainbow"></i><span>Gökkuşağı</span></button>
+            <button class="tool-item" data-tool="party"><i class="fas fa-star"></i><span>Parti</span></button>
+            <button class="tool-item" data-tool="rect"><i class="fas fa-square"></i><span>Dikdörtgen</span></button>
+            <button class="tool-item" data-tool="circle"><i class="fas fa-circle"></i><span>Daire</span></button>
+            <button class="tool-item" data-tool="triangle"><i class="fas fa-play" style="transform: rotate(90deg);"></i><span>Üçgen</span></button>
+            <button class="tool-item" data-tool="line"><i class="fas fa-minus" style="transform: rotate(45deg);"></i><span>Çizgi</span></button>
+            <button class="tool-item" data-sub="colors"><i class="fas fa-palette"></i><span>Renkler</span></button>
+            <button class="tool-item" data-sub="sizes"><i class="fas fa-ruler"></i><span>Boyut</span></button>
+            <button class="tool-item" id="clear-btn"><i class="fas fa-trash"></i><span>Temizle</span></button>
+            <button class="tool-item" id="save-btn"><i class="fas fa-save"></i><span>Kaydet</span></button>
+            <label class="tool-item" for="file-input"><i class="fas fa-upload"></i><span>Yükle</span></label>
+            <input type="file" id="file-input" accept="image/*" style="display: none;">
         </div>
 
-        <div id="sidebar">
-            <div class="tool-group">
-                <div class="group-title">Araçlar</div>
-                <button id="brush-tool" class="tool-btn active" title="Fırça">
-                    <i class="fas fa-paint-brush"></i>
-                    <span>Fırça</span>
-                </button>
-                <button id="eraser-tool" class="tool-btn" title="Silgi">
-                    <i class="fas fa-eraser"></i>
-                    <span>Silgi</span>
-                </button>
-                <button id="rainbow-tool" class="tool-btn" title="Gökkuşağı">
-                    <i class="fas fa-rainbow"></i>
-                    <span>Gökkuşağı</span>
-                </button>
-                <button id="party-tool" class="tool-btn" title="Parti">
-                    <i class="fas fa-star"></i>
-                    <span>Parti</span>
-                </button>
+        <div id="sub-menu">
+            <div class="sub-section" id="colors-section">
+                <h3>Renkler</h3>
+                <div id="color-grid"></div>
             </div>
+            <div class="sub-section" id="sizes-section">
+                <h3>Boyut</h3>
+                <button class="size-option active" data-size="5">5px</button>
+                <button class="size-option" data-size="15">15px</button>
+                <button class="size-option" data-size="30">30px</button>
+                <button class="size-option" data-size="45">45px</button>
+                <button class="size-option" data-size="60">60px</button>
+            </div>
+        </div>
 
-            <div class="tool-group">
-                <div class="group-title">Şekiller</div>
-                <button id="rect-tool" class="tool-btn" title="Dikdörtgen">
-                    <i class="fas fa-square"></i>
-                    <span>Dikdörtgen</span>
-                </button>
-                <button id="circle-tool" class="tool-btn" title="Daire">
-                    <i class="fas fa-circle"></i>
-                    <span>Daire</span>
-                </button>
-                <button id="triangle-tool" class="tool-btn" title="Üçgen">
-                    <i class="fas fa-play" style="transform: rotate(90deg);"></i>
-                    <span>Üçgen</span>
-                </button>
-                <button id="line-tool" class="tool-btn" title="Çizgi">
-                    <i class="fas fa-minus" style="transform: rotate(45deg);"></i>
-                    <span>Çizgi</span>
-                </button>
-            </div>
-
-            <div class="tool-group">
-                <div class="group-title">Renkler</div>
-                <div id="color-palette"></div>
-            </div>
-
-            <div class="tool-group">
-                <div class="group-title">Boyut</div>
-                <button class="size-btn active" data-size="5">1x</button>
-                <button class="size-btn" data-size="15">2x</button>
-                <button class="size-btn" data-size="30">3x</button>
-                <button class="size-btn" data-size="45">4x</button>
-                <button class="size-btn" data-size="60">5x</button>
-            </div>
-
-            <div class="tool-group">
-                <div class="group-title">İşlemler</div>
-                <button id="clear-btn" class="tool-btn" title="Temizle">
-                    <i class="fas fa-trash"></i>
-                    <span>Temizle</span>
-                </button>
-                <button id="save-btn" class="tool-btn" title="Kaydet">
-                    <i class="fas fa-save"></i>
-                    <span>Kaydet</span>
-                </button>
-                <label for="file-input" class="tool-btn" title="Resim Yükle">
-                    <i class="fas fa-upload"></i>
-                    <span>Yükle</span>
-                </label>
-                <input type="file" id="file-input" accept="image/*" style="display: none;">
-            </div>
+        <div id="image-bar">
+            <button class="image-btn" id="prev-image"><i class="fas fa-chevron-left"></i></button>
+            <button class="image-btn" id="next-image"><i class="fas fa-chevron-right"></i></button>
+            <button class="image-btn" id="random-image"><i class="fas fa-dice"></i></button>
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script>
+        const canvas = document.getElementById('drawing-canvas');
+        const ctx = canvas.getContext('2d');
+        const toolbar = document.getElementById('toolbar');
+        const subMenu = document.getElementById('sub-menu');
+        const colorGrid = document.getElementById('color-grid');
+        const toolItems = document.querySelectorAll('.tool-item');
+        const sizeOptions = document.querySelectorAll('.size-option');
+        const clearBtn = document.getElementById('clear-btn');
+        const saveBtn = document.getElementById('save-btn');
+        const fileInput = document.getElementById('file-input');
+        const prevImageBtn = document.getElementById('prev-image');
+        const nextImageBtn = document.getElementById('next-image');
+        const randomImageBtn = document.getElementById('random-image');
+
+        let isDrawing = false;
+        let currentTool = 'brush';
+        let currentColor = '#000000';
+        let currentSize = 5;
+        let lastX = 0;
+        let lastY = 0;
+        let hue = 0;
+        let isPartyMode = false;
+        let isShapeDrawing = false;
+        let shapeStartX = 0;
+        let shapeStartY = 0;
+        let shapeSize = 50;
+
+        // GitHub'dan PDF dosyaları (örnek URL'ler, kendi deponu güncelleyeceksin)
+        const images = [
+            'https://raw.githubusercontent.com/kullaniciadi/depoadi/main/images/bear.pdf',
+            'https://raw.githubusercontent.com/kullaniciadi/depoadi/main/images/bunny.pdf',
+            'https://raw.githubusercontent.com/kullaniciadi/depoadi/main/images/cat.pdf',
+            'https://raw.githubusercontent.com/kullaniciadi/depoadi/main/images/dog.pdf',
+            'https://raw.githubusercontent.com/kullaniciadi/depoadi/main/images/duck.pdf'
+        ];
+        let currentImageIndex = 0;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            if (currentImageIndex >= 0) {
+                loadImage(images[currentImageIndex]);
+            }
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        const colors = [
+            '#000000', '#ffffff', '#ff0000', '#00ff00', '#0000ff',
+            '#ffff00', '#ff00ff', '#00ffff', '#ff8000', '#8000ff',
+            '#008080', '#ff0080', '#808080', '#ffa500', '#800080', '#008000'
+        ];
+
+        colors.forEach(color => {
+            const btn = document.createElement('button');
+            btn.classList.add('color-option');
+            btn.style.backgroundColor = color;
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.color-option').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentColor = color;
+                currentTool = 'brush';
+            });
+            colorGrid.appendChild(btn);
+        });
+
+        toolItems.forEach(item => {
+            item.addEventListener('click', () => {
+                if (item.dataset.tool) {
+                    toolItems.forEach(i => i.classList.remove('active'));
+                    item.classList.add('active');
+                    currentTool = item.dataset.tool;
+                    subMenu.classList.remove('active');
+                    if (currentTool === 'party') {
+                        isPartyMode = !isPartyMode;
+                        item.style.color = isPartyMode ? '#ffeaa7' : '#fff';
+                    } else {
+                        isPartyMode = false;
+                        document.querySelector('[data-tool="party"]').style.color = '#fff';
+                    }
+                } else if (item.dataset.sub) {
+                    subMenu.classList.toggle('active');
+                    document.querySelectorAll('.sub-section').forEach(s => s.style.display = 'none');
+                    document.getElementById(`${item.dataset.sub}-section`).style.display = 'block';
+                }
+            });
+        });
+
+        sizeOptions.forEach(btn => {
+            btn.addEventListener('click', () => {
+                sizeOptions.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentSize = parseInt(btn.dataset.size);
+                shapeSize = currentSize;
+            });
+        });
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            startDrawing({ clientX: touch.clientX, clientY: touch.clientY });
+        });
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            draw({ clientX: touch.clientX, clientY: touch.clientY });
+        });
+        canvas.addEventListener('touchend', stopDrawing);
+
+        function startDrawing(e) {
+            if (['rect', 'circle', 'triangle', 'line'].includes(currentTool)) {
+                isShapeDrawing = true;
+                shapeStartX = e.clientX;
+                shapeStartY = e.clientY;
+            } else if (currentTool === 'party' && isPartyMode) {
+                createPartyEffect(e.clientX, e.clientY);
+            } else {
+                isDrawing = true;
+                [lastX, lastY] = [e.clientX, e.clientY];
+            }
+        }
+
+        function draw(e) {
+            if (isDrawing && !['rect', 'circle', 'triangle', 'line', 'party'].includes(currentTool)) {
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(e.clientX, e.clientY);
+                ctx.lineWidth = currentSize;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+
+                switch (currentTool) {
+                    case 'brush': ctx.strokeStyle = currentColor; break;
+                    case 'eraser': ctx.strokeStyle = '#ffffff'; break;
+                    case 'rainbow': ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`; hue = (hue + 1) % 360; break;
+                }
+                ctx.stroke();
+                [lastX, lastY] = [e.clientX, e.clientY];
+            } else if (isShapeDrawing) {
+                shapeSize = Math.max(10, Math.sqrt(Math.pow(e.clientX - shapeStartX, 2) + Math.pow(e.clientY - shapeStartY, 2)));
+                redrawCanvas();
+                drawShape(shapeStartX, shapeStartY, shapeSize);
+            }
+        }
+
+        function stopDrawing() {
+            if (isShapeDrawing) {
+                isShapeDrawing = false;
+            } else {
+                isDrawing = false;
+            }
+        }
+
+        function drawShape(x, y, size) {
+            ctx.beginPath();
+            ctx.strokeStyle = currentColor;
+            ctx.lineWidth = 2;
+
+            switch (currentTool) {
+                case 'rect':
+                    ctx.strokeRect(x - size / 2, y - size / 2, size, size);
+                    break;
+                case 'circle':
+                    ctx.arc(x, y, size / 2, 0, Math.PI * 2);
+                    ctx.stroke();
+                    break;
+                case 'triangle':
+                    ctx.moveTo(x, y - size / 2);
+                    ctx.lineTo(x - size / 2, y + size / 2);
+                    ctx.lineTo(x + size / 2, y + size / 2);
+                    ctx.closePath();
+                    ctx.stroke();
+                    break;
+                case 'line':
+                    ctx.moveTo(x - size / 2, y);
+                    ctx.lineTo(x + size / 2, y);
+                    ctx.stroke();
+                    break;
+            }
+        }
+
+        function redrawCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (currentImageIndex >= 0) {
+                loadImage(images[currentImageIndex], false);
+            }
+        }
+
+        canvas.addEventListener('wheel', (e) => {
+            if (['rect', 'circle', 'triangle', 'line'].includes(currentTool)) {
+                e.preventDefault();
+                shapeSize = Math.max(10, Math.min(200, shapeSize + (e.deltaY < 0 ? 10 : -10)));
+            }
+        });
+
+        function createPartyEffect(x, y) {
+            const effect = document.createElement('div');
+            effect.classList.add('party-effect');
+            effect.style.left = `${x - 25}px`;
+            effect.style.top = `${y - 25}px`;
+            effect.style.width = '50px';
+            effect.style.height = '50px';
+            effect.style.background = `radial-gradient(circle, hsl(${Math.random() * 360}, 100%, 50%), transparent)`;
+            document.body.appendChild(effect);
+            setTimeout(() => effect.remove(), 1000);
+        }
+
+        clearBtn.addEventListener('click', () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (currentImageIndex >= 0) loadImage(images[currentImageIndex]);
+        });
+
+        saveBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'gizemin_boyama.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const img = new Image();
+                img.onload = () => {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                };
+                img.src = URL.createObjectURL(file);
+                currentImageIndex = -1;
+            }
+        });
+
+        async function loadImage(src, redraw = true) {
+            try {
+                const response = await fetch(src);
+                const arrayBuffer = await response.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                const page = await pdf.getPage(1); // İlk sayfayı al
+                const viewport = page.getViewport({ scale: 1.5 });
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCanvas.width = viewport.width;
+                tempCanvas.height = viewport.height;
+
+                await page.render({
+                    canvasContext: tempCtx,
+                    viewport: viewport
+                }).promise;
+
+                if (redraw) ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(tempCanvas, 0, 0, canvas.width, canvas.height);
+            } catch (error) {
+                console.error(`PDF yüklenemedi: ${src}`, error);
+            }
+        }
+
+        prevImageBtn.addEventListener('click', () => {
+            if (images.length === 0) return;
+            currentImageIndex = (currentImageIndex - 1 + images.length) % images.length;
+            loadImage(images[currentImageIndex]);
+        });
+
+        nextImageBtn.addEventListener('click', () => {
+            if (images.length === 0) return;
+            currentImageIndex = (currentImageIndex + 1) % images.length;
+            loadImage(images[currentImageIndex]);
+        });
+
+        randomImageBtn.addEventListener('click', () => {
+            currentImageIndex = Math.floor(Math.random() * images.length);
+            loadImage(images[currentImageIndex]);
+        });
+
+        // İlk görseli yükle
+        loadImage(images[currentImageIndex]);
+    </script>
 </body>
 </html>
