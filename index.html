@@ -234,7 +234,7 @@
     </div>
 
     <script>
-        // Canvas ayarları ve çizim fonksiyonları
+        // ===== Canvas ve çizim ayarları =====
         const canvas = document.getElementById('drawing-canvas');
         const ctx = canvas.getContext('2d');
         const toolbar = document.getElementById('toolbar');
@@ -262,16 +262,24 @@
         let shapeStartY = 0;
         let shapeSize = 50;
 
-        // Resim dizisi, API ile güncellenecek
-        let images = [];
+        // ===== Burada images dizisini manuel tanımlıyoruz (raw linklerle) =====
+        // Dilerseniz branch'i veya commit'i değiştirebilirsiniz.
+        // Aşağıda "main" branch'i kullanılmıştır.
+        const images = [
+            'https://raw.githubusercontent.com/showman1907/duck/main/images/9c4bpMqyi-1.png',
+            'https://raw.githubusercontent.com/showman1907/duck/main/images/BzTxrecBR-1.png',
+            'https://raw.githubusercontent.com/showman1907/duck/main/images/RidRaBERt-1.png',
+            'https://raw.githubusercontent.com/showman1907/duck/main/images/RkTKy9cjB-1.png',
+            'https://raw.githubusercontent.com/showman1907/duck/main/images/Xyikd9reG-1.png',
+            'https://raw.githubusercontent.com/showman1907/duck/main/images/di6ax5brT-1.png',
+            'https://raw.githubusercontent.com/showman1907/duck/main/images/duck1.png',
+            'https://raw.githubusercontent.com/showman1907/duck/main/images/duck2.png',
+            'https://raw.githubusercontent.com/showman1907/duck/main/images/noel.png',
+            'https://raw.githubusercontent.com/showman1907/duck/main/images/rcLoGxpc8-1.png'
+        ];
         let currentImageIndex = 0;
 
-        // GitHub API ayarları
-        const API_URL = 'https://api.github.com/repos/showman1907/duck/contents/images?ref=main';
-        // Token'ı sadece yerel test amaçlı kullanın, güvenliğinize dikkat edin.
-        const GITHUB_TOKEN = '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';
-
-        // Canvas yeniden boyutlandırma
+        // Canvas boyutlandırma
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
@@ -282,32 +290,7 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        // GitHub API'sinden resimleri çekme
-        fetch(API_URL, {
-            headers: {
-                'Authorization': 'token ' + GITHUB_TOKEN
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('API hatası: ' + response.status);
-            }
-            return response.json();
-        })
-        .then(data => {
-            data.forEach(item => {
-                if (item.name.endsWith('.png')) {
-                    images.push(item.download_url);
-                }
-            });
-            console.log("Bulunan resimler:", images);
-            if (images.length > 0) {
-                loadImage(images[currentImageIndex]);
-            }
-        })
-        .catch(err => console.error('API hatası:', err));
-
-        // Renk seçenekleri
+        // Renk paleti
         const colors = [
             '#000000', '#ffffff', '#ff0000', '#00ff00', '#0000ff',
             '#ffff00', '#ff00ff', '#00ffff', '#ff8000', '#8000ff',
@@ -326,7 +309,7 @@
             colorGrid.appendChild(btn);
         });
 
-        // Araç çubuğu işlemleri
+        // Araç çubuğu (tool) olayları
         toolItems.forEach(item => {
             item.addEventListener('click', () => {
                 if (item.dataset.tool) {
@@ -334,6 +317,7 @@
                     item.classList.add('active');
                     currentTool = item.dataset.tool;
                     subMenu.classList.remove('active');
+
                     if (currentTool === 'party') {
                         isPartyMode = !isPartyMode;
                         item.style.color = isPartyMode ? '#ffeaa7' : '#fff';
@@ -359,11 +343,12 @@
             });
         });
 
-        // Çizim ve şekil çizim olayları
+        // Mouse ve dokunmatik olayları
         canvas.addEventListener('mousedown', startDrawing);
         canvas.addEventListener('mousemove', draw);
         canvas.addEventListener('mouseup', stopDrawing);
         canvas.addEventListener('mouseout', stopDrawing);
+
         canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             const touch = e.touches[0];
@@ -397,6 +382,7 @@
                 ctx.lineWidth = currentSize;
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
+
                 switch (currentTool) {
                     case 'brush': 
                         ctx.strokeStyle = currentColor;
@@ -430,6 +416,7 @@
             ctx.beginPath();
             ctx.strokeStyle = currentColor;
             ctx.lineWidth = 2;
+
             switch (currentTool) {
                 case 'rect':
                     ctx.strokeRect(x - size / 2, y - size / 2, size, size);
@@ -453,6 +440,7 @@
             }
         }
 
+        // Çizimi silip, varsa arka plandaki resmi yeniden yüklemek için
         function redrawCanvas() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             if (currentImageIndex >= 0 && images.length > 0) {
@@ -460,6 +448,7 @@
             }
         }
 
+        // Fare tekerleğiyle şekil boyutu değiştirme
         canvas.addEventListener('wheel', (e) => {
             if (['rect', 'circle', 'triangle', 'line'].includes(currentTool)) {
                 e.preventDefault();
@@ -467,6 +456,7 @@
             }
         });
 
+        // Parti efekti
         function createPartyEffect(x, y) {
             const effect = document.createElement('div');
             effect.classList.add('party-effect');
@@ -479,11 +469,15 @@
             setTimeout(() => effect.remove(), 1000);
         }
 
+        // Temizle butonu
         clearBtn.addEventListener('click', () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            if (currentImageIndex >= 0 && images.length > 0) loadImage(images[currentImageIndex]);
+            if (currentImageIndex >= 0 && images.length > 0) {
+                loadImage(images[currentImageIndex]);
+            }
         });
 
+        // Kaydet butonu
         saveBtn.addEventListener('click', () => {
             const link = document.createElement('a');
             link.download = 'gizemin_boyama.png';
@@ -491,6 +485,7 @@
             link.click();
         });
 
+        // Yerel dosya yükleme
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
@@ -500,11 +495,11 @@
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                 };
                 img.src = URL.createObjectURL(file);
-                currentImageIndex = -1;
+                currentImageIndex = -1; // Manuel yüklenen resim için
             }
         });
 
-        // Resmi yükleyip canvas'a çizen fonksiyon
+        // Seçili resmi canvas'a yükleme fonksiyonu
         function loadImage(src, redraw = true) {
             const img = new Image();
             img.crossOrigin = 'Anonymous';
@@ -516,7 +511,7 @@
             img.src = src;
         }
 
-        // Resimler arasında gezinmek için buton işlemleri
+        // Önceki, Sonraki, Rastgele butonları
         prevImageBtn.addEventListener('click', () => {
             if (images.length === 0) return;
             currentImageIndex = (currentImageIndex - 1 + images.length) % images.length;
@@ -532,6 +527,11 @@
             currentImageIndex = Math.floor(Math.random() * images.length);
             loadImage(images[currentImageIndex]);
         });
+
+        // İlk resmi yükle (varsa)
+        if (images.length > 0) {
+            loadImage(images[currentImageIndex]);
+        }
     </script>
 </body>
 </html>
