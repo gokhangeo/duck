@@ -38,6 +38,7 @@
             transition: width 0.3s ease;
             z-index: 1000;
             box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+            overflow-y: auto; /* Yatay modda kaydırma */
         }
         #toolbar:hover {
             width: 200px;
@@ -83,7 +84,7 @@
             z-index: 999;
         }
         #sub-menu.active {
-            width: 220px;
+            width: 250px; /* Daha geniş açılmasını sağla */
             padding: 15px;
         }
         .sub-section {
@@ -170,15 +171,46 @@
             background: #ff6f61;
             transform: scale(1.1);
         }
-        .party-effect {
+        .party-effect, .balloon {
             position: absolute;
-            pointer-events: none;
-            animation: explode 1s ease-out forwards;
+            pointer-events: auto;
             z-index: 500;
+        }
+        .party-effect {
+            animation: explode 1s ease-out forwards;
+        }
+        .balloon {
+            width: 50px;
+            height: 70px;
+            background: radial-gradient(circle, hsl(${Math.random() * 360}, 70%, 50%), hsl(${Math.random() * 360}, 70%, 30%));
+            border-radius: 50% 50% 70% 70%;
+            cursor: pointer;
+            animation: float 4s infinite ease-in-out;
+        }
+        .balloon:hover {
+            transform: scale(1.1);
         }
         @keyframes explode {
             0% { transform: scale(0); opacity: 1; }
             100% { transform: scale(2); opacity: 0; }
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-50px); }
+        }
+        @media (max-width: 768px) and (orientation: landscape) {
+            #toolbar {
+                height: auto; /* Yatay modda menü yüksekliği otomatik */
+                max-height: 100vh;
+                overflow-y: auto; /* Yatay modda kaydırma */
+            }
+            #toolbar:hover {
+                width: 150px; /* Daha küçük genişlik */
+            }
+            #sub-menu.active {
+                width: 200px; /* Daha küçük genişlik */
+                left: 60px;
+            }
         }
         @media (max-width: 768px) {
             #toolbar { width: 60px; }
@@ -229,6 +261,7 @@
         </div>
 
         <div id="image-bar">
+            <button class="image-btn" id="new-canvas-btn"><i class="fas fa-file"></i></button>
             <button class="image-btn" id="prev-image"><i class="fas fa-chevron-left"></i></button>
             <button class="image-btn" id="next-image"><i class="fas fa-chevron-right"></i></button>
             <button class="image-btn" id="random-image"><i class="fas fa-dice"></i></button>
@@ -248,6 +281,7 @@
         const saveBtn = document.getElementById('save-btn');
         const fileInput = document.getElementById('file-input');
         const undoBtn = document.getElementById('undo-btn');
+        const newCanvasBtn = document.getElementById('new-canvas-btn');
         const prevImageBtn = document.getElementById('prev-image');
         const nextImageBtn = document.getElementById('next-image');
         const randomImageBtn = document.getElementById('random-image');
@@ -264,6 +298,7 @@
         let shapeStartX = 0;
         let shapeStartY = 0;
         let shapeSize = 50;
+        let hasBackgroundImage = false; // Arka plan resmi olup olmadığını takip etmek için
 
         // Çizimleri ve şekilleri saklamak için bir dizi
         let drawings = []; // Fırça, silgi, gökkuşağı için path'ler
@@ -282,7 +317,7 @@
             'https://raw.githubusercontent.com/showman1907/duck/main/images/kiKRGxKrT-1.png',
             'https://raw.githubusercontent.com/showman1907/duck/main/images/rcLoGxpc8-1.png'
         ];
-        let currentImageIndex = 0;
+        let currentImageIndex = -1; // Boş sayfa için varsayılan -1
 
         // ======== Canvas boyutlandırma ========
         function resizeCanvas() {
@@ -326,9 +361,11 @@
                     if (currentTool === 'party') {
                         isPartyMode = !isPartyMode;
                         item.style.color = isPartyMode ? '#ffeaa7' : '#fff';
+                        toggleBalloons();
                     } else {
                         isPartyMode = false;
                         document.querySelector('[data-tool="party"]').style.color = '#fff';
+                        clearBalloons();
                     }
                 } else if (item.dataset.sub) {
                     subMenu.classList.toggle('active');
@@ -353,6 +390,7 @@
         canvas.addEventListener('mousemove', draw);
         canvas.addEventListener('mouseup', stopDrawing);
         canvas.addEventListener('mouseout', stopDrawing);
+        canvas.addEventListener('click', handleCanvasClick); // Balon patlatma için
 
         canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
@@ -375,14 +413,14 @@
                 floodFill(e.clientX, e.clientY, currentColor);
             } else if (['rect', 'circle', 'triangle', 'line'].includes(currentTool)) {
                 isShapeDrawing = true;
-                shapeStartX = e.clientX;
-                shapeStartY = e.clientY;
+                shapeStartX = e.clientX - canvas.offsetLeft; // Canvas offset'ini hesaba kat
+                shapeStartY = e.clientY - canvas.offsetTop;
             } else if (currentTool === 'party' && isPartyMode) {
                 createPartyEffect(e.clientX, e.clientY);
             } else {
                 isDrawing = true;
-                [lastX, lastY] = [e.clientX, e.clientY];
-                drawings.push({ tool: currentTool, color: currentColor, size: currentSize, points: [[e.clientX, e.clientY]] });
+                [lastX, lastY] = [e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop];
+                drawings.push({ tool: currentTool, color: currentColor, size: currentSize, points: [[lastX, lastY]] });
             }
         }
 
@@ -391,7 +429,7 @@
             if (isDrawing && !['rect', 'circle', 'triangle', 'line', 'party'].includes(currentTool)) {
                 ctx.beginPath();
                 ctx.moveTo(lastX, lastY);
-                ctx.lineTo(e.clientX, e.clientY);
+                ctx.lineTo(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop);
                 ctx.lineWidth = currentSize;
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
@@ -409,10 +447,10 @@
                         break;
                 }
                 ctx.stroke();
-                drawings[drawings.length - 1].points.push([e.clientX, e.clientY]);
-                [lastX, lastY] = [e.clientX, e.clientY];
+                drawings[drawings.length - 1].points.push([e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop]);
+                [lastX, lastY] = [e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop];
             } else if (isShapeDrawing) {
-                shapeSize = Math.max(10, Math.sqrt(Math.pow(e.clientX - shapeStartX, 2) + Math.pow(e.clientY - shapeStartY, 2)));
+                shapeSize = Math.max(10, Math.sqrt(Math.pow((e.clientX - canvas.offsetLeft) - shapeStartX, 2) + Math.pow((e.clientY - canvas.offsetTop) - shapeStartY, 2)));
                 redrawCanvas();
                 drawShape(shapeStartX, shapeStartY, shapeSize);
             }
@@ -465,7 +503,7 @@
         // ======== Canvas'ı yeniden çizme (şekil ve çizimler dahil) ========
         function redrawCanvas() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            if (currentImageIndex >= 0 && images.length > 0) {
+            if (hasBackgroundImage && currentImageIndex >= 0 && images.length > 0) {
                 loadImage(images[currentImageIndex], false);
             }
             // Çizimleri yeniden çiz
@@ -502,7 +540,7 @@
             }
         });
 
-        // ======== Parti efekti (balonlar kaldırıldı) ========
+        // ======== Parti efekti ve balonlar ========
         function createPartyEffect(x, y) {
             const effect = document.createElement('div');
             effect.classList.add('party-effect');
@@ -513,6 +551,87 @@
             effect.style.background = `radial-gradient(circle, hsl(${Math.random() * 360}, 100%, 50%), transparent)`;
             document.body.appendChild(effect);
             setTimeout(() => effect.remove(), 1000);
+        }
+
+        let balloons = [];
+        function createBalloon() {
+            const balloon = document.createElement('div');
+            balloon.classList.add('balloon');
+            const x = Math.random() * (canvas.width - 50);
+            const y = canvas.height;
+            balloon.style.left = `${x}px`;
+            balloon.style.top = `${y}px`;
+            balloon.addEventListener('click', () => popBalloon(balloon));
+            document.body.appendChild(balloon);
+            balloons.push(balloon);
+            animateBalloon(balloon);
+        }
+
+        function animateBalloon(balloon) {
+            let pos = canvas.height;
+            const speed = 1;
+            function move() {
+                if (isPartyMode && pos > -70) {
+                    pos -= speed;
+                    balloon.style.top = `${pos}px`;
+                    requestAnimationFrame(move);
+                } else if (!isPartyMode) {
+                    balloon.remove();
+                    balloons = balloons.filter(b => b !== balloon);
+                }
+            }
+            move();
+        }
+
+        function popBalloon(balloon) {
+            const effect = document.createElement('div');
+            effect.classList.add('party-effect');
+            effect.style.left = `${parseFloat(balloon.style.left) + 25}px`;
+            effect.style.top = `${parseFloat(balloon.style.top) + 35}px`;
+            effect.style.width = '50px';
+            effect.style.height = '50px';
+            effect.style.background = balloon.style.background;
+            document.body.appendChild(effect);
+            setTimeout(() => effect.remove(), 1000);
+            balloon.remove();
+            balloons = balloons.filter(b => b !== balloon);
+        }
+
+        function toggleBalloons() {
+            if (isPartyMode) {
+                const interval = setInterval(() => {
+                    if (balloons.length < 10 && isPartyMode) {
+                        createBalloon();
+                    }
+                }, 1000);
+                setTimeout(() => clearInterval(interval), 10000); // 10 saniye sonra dur
+            } else {
+                clearBalloons();
+            }
+        }
+
+        function clearBalloons() {
+            balloons.forEach(balloon => balloon.remove());
+            balloons = [];
+        }
+
+        function handleCanvasClick(e) {
+            if (isPartyMode) {
+                balloons.forEach(balloon => {
+                    const balloonRect = balloon.getBoundingClientRect();
+                    const canvasRect = canvas.getBoundingClientRect();
+                    const clickX = e.clientX - canvasRect.left;
+                    const clickY = e.clientY - canvasRect.top;
+                    if (
+                        clickX >= balloonRect.left - canvasRect.left &&
+                        clickX <= balloonRect.right - canvasRect.left &&
+                        clickY >= balloonRect.top - canvasRect.top &&
+                        clickY <= balloonRect.bottom - canvasRect.top
+                    ) {
+                        popBalloon(balloon);
+                    }
+                });
+            }
         }
 
         // ======== Flood Fill (Kova Doldur) ========
@@ -589,9 +708,8 @@
             drawings = [];
             shapes = [];
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            if (currentImageIndex >= 0 && images.length > 0) {
-                loadImage(images[currentImageIndex]);
-            }
+            hasBackgroundImage = false;
+            currentImageIndex = -1;
         });
 
         saveBtn.addEventListener('click', () => {
@@ -610,9 +728,10 @@
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                     drawings = [];
                     shapes = [];
+                    hasBackgroundImage = true;
+                    currentImageIndex = -1;
                 };
                 img.src = URL.createObjectURL(file);
-                currentImageIndex = -1;
             }
         });
 
@@ -630,13 +749,22 @@
                 const offsetX = (canvas.width - newWidth) / 2;
                 const offsetY = (canvas.height - newHeight) / 2;
                 ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
+                hasBackgroundImage = true;
                 if (redraw) redrawCanvas();
             };
             img.onerror = () => console.error('Görsel yüklenemedi:', src);
             img.src = src;
         }
 
-        // ======== Resim değiştirme butonları ========
+        // ======== Resim ve boş canvas değiştirme butonları ========
+        newCanvasBtn.addEventListener('click', () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawings = [];
+            shapes = [];
+            hasBackgroundImage = false;
+            currentImageIndex = -1;
+        });
+
         prevImageBtn.addEventListener('click', () => {
             if (images.length === 0) return;
             currentImageIndex = (currentImageIndex - 1 + images.length) % images.length;
@@ -653,9 +781,10 @@
             loadImage(images[currentImageIndex]);
         });
 
-        // ======== İlk resmi yükle ========
-        if (images.length > 0) {
-            loadImage(images[currentImageIndex]);
+        // ======== İlk olarak boş sayfa yükle ========
+        if (currentImageIndex === -1) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            hasBackgroundImage = false;
         }
     </script>
 </body>
