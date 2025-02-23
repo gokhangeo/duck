@@ -38,7 +38,7 @@
             transition: width 0.3s ease;
             z-index: 1000;
             box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
-            overflow-y: auto; /* Yatay modda kaydırma */
+            overflow-y: auto;
         }
         #toolbar:hover {
             width: 200px;
@@ -84,7 +84,7 @@
             z-index: 999;
         }
         #sub-menu.active {
-            width: 250px; /* Daha geniş açılmasını sağla */
+            width: 250px;
             padding: 15px;
         }
         .sub-section {
@@ -200,15 +200,15 @@
         }
         @media (max-width: 768px) and (orientation: landscape) {
             #toolbar {
-                height: auto; /* Yatay modda menü yüksekliği otomatik */
+                height: auto;
                 max-height: 100vh;
-                overflow-y: auto; /* Yatay modda kaydırma */
+                overflow-y: auto;
             }
             #toolbar:hover {
-                width: 150px; /* Daha küçük genişlik */
+                width: 150px;
             }
             #sub-menu.active {
-                width: 200px; /* Daha küçük genişlik */
+                width: 200px;
                 left: 60px;
             }
         }
@@ -390,15 +390,13 @@
         canvas.addEventListener('mousemove', draw);
         canvas.addEventListener('mouseup', stopDrawing);
         canvas.addEventListener('mouseout', stopDrawing);
-        canvas.addEventListener('click', handleCanvasClick); // Balon ve parti efekti için
+        canvas.addEventListener('click', handleCanvasClick); // Balon patlatma için
 
         canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             const touch = e.touches[0];
             if (currentTool === 'fill') {
-                floodFill(touch.clientX - canvas.offsetLeft, touch.clientY - canvas.offsetTop, currentColor);
-            } else if (currentTool === 'party' && isPartyMode) {
-                createPartyEffect(touch.clientX, touch.clientY);
+                floodFill(touch.clientX, touch.clientY, currentColor);
             } else {
                 startDrawing({ clientX: touch.clientX, clientY: touch.clientY });
             }
@@ -412,7 +410,7 @@
 
         function startDrawing(e) {
             if (currentTool === 'fill') {
-                floodFill(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop, currentColor);
+                floodFill(e.clientX, e.clientY, currentColor);
             } else if (['rect', 'circle', 'triangle', 'line'].includes(currentTool)) {
                 isShapeDrawing = true;
                 shapeStartX = e.clientX - canvas.offsetLeft;
@@ -452,7 +450,13 @@
                 drawings[drawings.length - 1].points.push([e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop]);
                 [lastX, lastY] = [e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop];
             } else if (isShapeDrawing) {
-                shapeSize = Math.max(10, Math.sqrt(Math.pow((e.clientX - canvas.offsetLeft) - shapeStartX, 2) + Math.pow((e.clientY - canvas.offsetTop) - shapeStartY, 2)));
+                shapeSize = Math.max(
+                    10,
+                    Math.sqrt(
+                        Math.pow((e.clientX - canvas.offsetLeft) - shapeStartX, 2) + 
+                        Math.pow((e.clientY - canvas.offsetTop) - shapeStartY, 2)
+                    )
+                );
                 redrawCanvas();
                 drawShape(shapeStartX, shapeStartY, shapeSize);
             }
@@ -520,7 +524,7 @@
                 ctx.lineJoin = 'round';
                 ctx.strokeStyle = drawing.color;
                 if (drawing.tool === 'rainbow') {
-                    ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`; // Basit bir simülasyon
+                    ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`; // Basit simülasyon
                 } else if (drawing.tool === 'eraser') {
                     ctx.strokeStyle = '#ffffff';
                 }
@@ -601,14 +605,14 @@
 
         function toggleBalloons() {
             if (isPartyMode) {
-                if (balloons.length === 0) { // Sadece balon yoksa oluştur
-                    const interval = setInterval(() => {
-                        if (balloons.length < 10 && isPartyMode) {
-                            createBalloon();
-                        }
-                    }, 1000);
-                    setTimeout(() => clearInterval(interval), 10000); // 10 saniye sonra dur
-                }
+                // Her 1 saniyede bir, maksimum 10 balon oluştur
+                const interval = setInterval(() => {
+                    if (balloons.length < 10 && isPartyMode) {
+                        createBalloon();
+                    }
+                }, 1000);
+                // 10 saniye sonra durdur
+                setTimeout(() => clearInterval(interval), 10000);
             } else {
                 clearBalloons();
             }
@@ -621,18 +625,16 @@
 
         function handleCanvasClick(e) {
             if (isPartyMode) {
-                createPartyEffect(e.clientX, e.clientY); // Parti efekti ekle
-                // Balonlara tıklandıysa patlat
                 balloons.forEach(balloon => {
                     const balloonRect = balloon.getBoundingClientRect();
                     const canvasRect = canvas.getBoundingClientRect();
-                    const clickX = e.clientX;
-                    const clickY = e.clientY;
+                    const clickX = e.clientX - canvasRect.left;
+                    const clickY = e.clientY - canvasRect.top;
                     if (
-                        clickX >= balloonRect.left &&
-                        clickX <= balloonRect.right &&
-                        clickY >= balloonRect.top &&
-                        clickY <= balloonRect.bottom
+                        clickX >= balloonRect.left - canvasRect.left &&
+                        clickX <= balloonRect.right - canvasRect.left &&
+                        clickY >= balloonRect.top - canvasRect.top &&
+                        clickY <= balloonRect.bottom - canvasRect.top
                     ) {
                         popBalloon(balloon);
                     }
@@ -644,12 +646,12 @@
         function floodFill(x, y, fillColor) {
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const pixels = imageData.data;
-            const targetColor = getPixelColor(x, y, pixels);
+            const targetColor = getPixelColor(x - canvas.offsetLeft, y - canvas.offsetTop, pixels);
             const fillColorRGB = hexToRGB(fillColor);
 
             if (colorsMatch(targetColor, fillColorRGB, 30)) return;
 
-            const stack = [[x, y]];
+            const stack = [[x - canvas.offsetLeft, y - canvas.offsetTop]];
             while (stack.length) {
                 const [currentX, currentY] = stack.pop();
                 const pos = (currentY * canvas.width + currentX) * 4;
@@ -741,7 +743,7 @@
             }
         });
 
-        // ======== Resim ve boş canvas değiştirme butonları ========
+        // ======== Resim yükleme (yalnızca ihtiyaç duyulduğunda yükleme) ========
         function loadImage(src, redraw = true) {
             const img = new Image();
             img.crossOrigin = 'Anonymous';
@@ -762,6 +764,7 @@
             img.src = src;
         }
 
+        // ======== Resim ve boş canvas değiştirme butonları ========
         newCanvasBtn.addEventListener('click', () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             drawings = [];
