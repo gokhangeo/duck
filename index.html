@@ -70,7 +70,7 @@
             background: rgba(255, 255, 255, 0.2);
             color: #ffeaa7;
         }
-        #sub-menu {
+        #sub-menu, #game-menu {
             position: fixed;
             top: 0;
             left: 70px;
@@ -82,22 +82,22 @@
             overflow: hidden;
             z-index: 999;
         }
-        #sub-menu.active {
+        #sub-menu.active, #game-menu.active {
             width: 220px;
             padding: 15px;
         }
-        .sub-section {
+        .sub-section, .game-section {
             margin-bottom: 20px;
             color: #fff;
         }
-        .sub-section h3 {
+        .sub-section h3, .game-section h3 {
             font-size: 14px;
             margin-bottom: 10px;
             color: #ffeaa7;
         }
         #color-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(5, 1fr); /* Daha fazla renk için genişletildi */
             gap: 8px;
         }
         .color-option {
@@ -170,20 +170,37 @@
             background: #ff6f61;
             transform: scale(1.1);
         }
-        .party-effect {
+        .party-effect, .balloon {
             position: absolute;
-            pointer-events: none;
-            animation: explode 1s ease-out forwards;
+            pointer-events: auto;
             z-index: 500;
+        }
+        .party-effect {
+            animation: explode 1s ease-out forwards;
+        }
+        .balloon {
+            width: 50px;
+            height: 70px;
+            background: radial-gradient(circle, hsl(${Math.random() * 360}, 70%, 50%), hsl(${Math.random() * 360}, 70%, 30%));
+            border-radius: 50% 50% 70% 70%;
+            cursor: pointer;
+            animation: float 4s infinite ease-in-out;
+        }
+        .balloon:hover {
+            transform: scale(1.1);
         }
         @keyframes explode {
             0% { transform: scale(0); opacity: 1; }
             100% { transform: scale(2); opacity: 0; }
         }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-50px); }
+        }
         @media (max-width: 768px) {
             #toolbar { width: 60px; }
             #toolbar:hover { width: 150px; }
-            #sub-menu.active { width: 100%; left: 0; }
+            #sub-menu.active, #game-menu.active { width: 100%; left: 0; }
             .image-btn { width: 35px; height: 35px; }
         }
     </style>
@@ -204,8 +221,10 @@
             <button class="tool-item" data-tool="triangle"><i class="fas fa-play" style="transform: rotate(90deg);"></i><span>Üçgen</span></button>
             <button class="tool-item" data-tool="line"><i class="fas fa-minus" style="transform: rotate(45deg);"></i><span>Çizgi</span></button>
             <button class="tool-item" data-tool="fill"><i class="fas fa-fill-drip"></i><span>Doldur</span></button>
+            <button class="tool-item" id="undo-btn"><i class="fas fa-undo"></i><span>Geri Al</span></button>
             <button class="tool-item" data-sub="colors"><i class="fas fa-palette"></i><span>Renkler</span></button>
             <button class="tool-item" data-sub="sizes"><i class="fas fa-ruler"></i><span>Boyut</span></button>
+            <button class="tool-item" data-sub="games"><i class="fas fa-gamepad"></i><span>Oyunlar</span></button>
             <button class="tool-item" id="clear-btn"><i class="fas fa-trash"></i><span>Temizle</span></button>
             <button class="tool-item" id="save-btn"><i class="fas fa-save"></i><span>Kaydet</span></button>
             <label class="tool-item" for="file-input"><i class="fas fa-upload"></i><span>Yükle</span></label>
@@ -227,6 +246,14 @@
             </div>
         </div>
 
+        <div id="game-menu">
+            <div class="game-section" id="games-section">
+                <h3>Oyunlar</h3>
+                <button class="game-option" id="balloon-game">Balon Patlatma</button>
+                <button class="game-option" id="color-match-game">Renk Eşleştirme</button>
+            </div>
+        </div>
+
         <div id="image-bar">
             <button class="image-btn" id="prev-image"><i class="fas fa-chevron-left"></i></button>
             <button class="image-btn" id="next-image"><i class="fas fa-chevron-right"></i></button>
@@ -240,15 +267,19 @@
         const ctx = canvas.getContext('2d');
         const toolbar = document.getElementById('toolbar');
         const subMenu = document.getElementById('sub-menu');
+        const gameMenu = document.getElementById('game-menu');
         const colorGrid = document.getElementById('color-grid');
         const toolItems = document.querySelectorAll('.tool-item');
         const sizeOptions = document.querySelectorAll('.size-option');
         const clearBtn = document.getElementById('clear-btn');
         const saveBtn = document.getElementById('save-btn');
         const fileInput = document.getElementById('file-input');
+        const undoBtn = document.getElementById('undo-btn');
         const prevImageBtn = document.getElementById('prev-image');
         const nextImageBtn = document.getElementById('next-image');
         const randomImageBtn = document.getElementById('random-image');
+        const balloonGameBtn = document.getElementById('balloon-game');
+        const colorMatchGameBtn = document.getElementById('color-match-game');
 
         let isDrawing = false;
         let currentTool = 'brush';
@@ -263,8 +294,11 @@
         let shapeStartY = 0;
         let shapeSize = 50;
 
+        // Çizimleri ve şekilleri saklamak için bir dizi
+        let drawings = []; // Fırça, silgi, gökkuşağı için path'ler
+        let shapes = [];   // Şekiller için (rect, circle, triangle, line)
+
         // ======== Yeni PNG listesi (images) ========
-        // GitHub'daki "images" klasöründe güncellenen dosya adları:
         const images = [
             'https://raw.githubusercontent.com/showman1907/duck/main/images/6Trpq8GTK-1.png',
             'https://raw.githubusercontent.com/showman1907/duck/main/images/9i4bpKB5T-1.png',
@@ -280,14 +314,13 @@
         let currentImageIndex = 0;
 
         // ======== Ön yükleme (Preload) ========
-        // Tüm görselleri baştan hafızaya alarak resim geçişlerini hızlandırıyoruz.
-        const preloadedImages = []; // Hafızaya alınmış <img> nesneleri
+        const preloadedImages = [];
         preloadAllImages();
 
         function preloadAllImages() {
             images.forEach(src => {
                 const imageObj = new Image();
-                imageObj.crossOrigin = 'Anonymous'; 
+                imageObj.crossOrigin = 'Anonymous';
                 imageObj.src = src;
                 preloadedImages.push(imageObj);
             });
@@ -297,18 +330,18 @@
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-            if (currentImageIndex >= 0 && images.length > 0) {
-                loadImage(images[currentImageIndex]);
-            }
+            redrawCanvas();
         }
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        // ======== Renk paleti ========
+        // ======== Genişletilmiş Renk Paleti ========
         const colors = [
             '#000000', '#ffffff', '#ff0000', '#00ff00', '#0000ff',
             '#ffff00', '#ff00ff', '#00ffff', '#ff8000', '#8000ff',
-            '#008080', '#ff0080', '#808080', '#ffa500', '#800080', '#008000'
+            '#008080', '#ff0080', '#808080', '#ffa500', '#800080', '#008000',
+            '#ff4040', '#40ff40', '#4040ff', '#ffff80', '#ff80ff', '#80ffff',
+            '#ffbf00', '#bf00ff', '#00bfbf', '#ff00bf', '#bfbfbf', '#ffbfbf'
         ];
         colors.forEach(color => {
             const btn = document.createElement('button');
@@ -331,18 +364,27 @@
                     item.classList.add('active');
                     currentTool = item.dataset.tool;
                     subMenu.classList.remove('active');
+                    gameMenu.classList.remove('active');
 
                     if (currentTool === 'party') {
                         isPartyMode = !isPartyMode;
                         item.style.color = isPartyMode ? '#ffeaa7' : '#fff';
+                        toggleBalloons();
                     } else {
                         isPartyMode = false;
                         document.querySelector('[data-tool="party"]').style.color = '#fff';
+                        clearBalloons();
                     }
                 } else if (item.dataset.sub) {
-                    subMenu.classList.toggle('active');
-                    document.querySelectorAll('.sub-section').forEach(s => s.style.display = 'none');
-                    document.getElementById(`${item.dataset.sub}-section`).style.display = 'block';
+                    if (item.dataset.sub === 'games') {
+                        gameMenu.classList.toggle('active');
+                        subMenu.classList.remove('active');
+                    } else {
+                        subMenu.classList.toggle('active');
+                        gameMenu.classList.remove('active');
+                        document.querySelectorAll('.sub-section').forEach(s => s.style.display = 'none');
+                        document.getElementById(`${item.dataset.sub}-section`).style.display = 'block';
+                    }
                 }
             });
         });
@@ -362,6 +404,7 @@
         canvas.addEventListener('mousemove', draw);
         canvas.addEventListener('mouseup', stopDrawing);
         canvas.addEventListener('mouseout', stopDrawing);
+        canvas.addEventListener('click', handleCanvasClick); // Balon patlatma için
 
         canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
@@ -391,6 +434,7 @@
             } else {
                 isDrawing = true;
                 [lastX, lastY] = [e.clientX, e.clientY];
+                drawings.push({ tool: currentTool, color: currentColor, size: currentSize, points: [[e.clientX, e.clientY]] });
             }
         }
 
@@ -417,6 +461,7 @@
                         break;
                 }
                 ctx.stroke();
+                drawings[drawings.length - 1].points.push([e.clientX, e.clientY]);
                 [lastX, lastY] = [e.clientX, e.clientY];
             } else if (isShapeDrawing) {
                 shapeSize = Math.max(10, Math.sqrt(Math.pow(e.clientX - shapeStartX, 2) + Math.pow(e.clientY - shapeStartY, 2)));
@@ -427,6 +472,14 @@
 
         function stopDrawing() {
             if (isShapeDrawing) {
+                const shape = {
+                    tool: currentTool,
+                    startX: shapeStartX,
+                    startY: shapeStartY,
+                    size: shapeSize,
+                    color: currentColor
+                };
+                shapes.push(shape);
                 isShapeDrawing = false;
             } else {
                 isDrawing = false;
@@ -461,12 +514,37 @@
             }
         }
 
-        // ======== Canvas'ı sıfırlayıp arka plan resmi yeniden yükleme ========
+        // ======== Canvas'ı yeniden çizme (şekil ve çizimler dahil) ========
         function redrawCanvas() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             if (currentImageIndex >= 0 && images.length > 0) {
                 loadImage(images[currentImageIndex], false);
             }
+            // Çizimleri yeniden çiz
+            drawings.forEach(drawing => {
+                ctx.beginPath();
+                ctx.moveTo(drawing.points[0][0], drawing.points[0][1]);
+                for (let i = 1; i < drawing.points.length; i++) {
+                    ctx.lineTo(drawing.points[i][0], drawing.points[i][1]);
+                }
+                ctx.lineWidth = drawing.size;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.strokeStyle = drawing.color;
+                if (drawing.tool === 'rainbow') {
+                    ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`; // Basit bir simülasyon
+                } else if (drawing.tool === 'eraser') {
+                    ctx.strokeStyle = '#ffffff';
+                }
+                ctx.stroke();
+            });
+            // Şekilleri yeniden çiz
+            shapes.forEach(shape => {
+                currentTool = shape.tool;
+                currentColor = shape.color;
+                drawShape(shape.startX, shape.startY, shape.size);
+            });
+            currentTool = document.querySelector('.tool-item.active').dataset.tool || 'brush';
         }
 
         canvas.addEventListener('wheel', (e) => {
@@ -476,7 +554,7 @@
             }
         });
 
-        // ======== Parti efekti ========
+        // ======== Parti efekti ve balonlar ========
         function createPartyEffect(x, y) {
             const effect = document.createElement('div');
             effect.classList.add('party-effect');
@@ -489,6 +567,68 @@
             setTimeout(() => effect.remove(), 1000);
         }
 
+        let balloons = [];
+        function createBalloon() {
+            const balloon = document.createElement('div');
+            balloon.classList.add('balloon');
+            const x = Math.random() * (canvas.width - 50);
+            const y = canvas.height;
+            balloon.style.left = `${x}px`;
+            balloon.style.top = `${y}px`;
+            balloon.addEventListener('click', () => popBalloon(balloon));
+            document.body.appendChild(balloon);
+            balloons.push(balloon);
+            animateBalloon(balloon);
+        }
+
+        function animateBalloon(balloon) {
+            let pos = canvas.height;
+            const speed = 1;
+            function move() {
+                if (isPartyMode && pos > -70) {
+                    pos -= speed;
+                    balloon.style.top = `${pos}px`;
+                    requestAnimationFrame(move);
+                } else if (!isPartyMode) {
+                    balloon.remove();
+                    balloons = balloons.filter(b => b !== balloon);
+                }
+            }
+            move();
+        }
+
+        function popBalloon(balloon) {
+            const effect = document.createElement('div');
+            effect.classList.add('party-effect');
+            effect.style.left = `${parseFloat(balloon.style.left) + 25}px`;
+            effect.style.top = `${parseFloat(balloon.style.top) + 35}px`;
+            effect.style.width = '50px';
+            effect.style.height = '50px';
+            effect.style.background = balloon.style.background;
+            document.body.appendChild(effect);
+            setTimeout(() => effect.remove(), 1000);
+            balloon.remove();
+            balloons = balloons.filter(b => b !== balloon);
+        }
+
+        function toggleBalloons() {
+            if (isPartyMode) {
+                const interval = setInterval(() => {
+                    if (balloons.length < 10 && isPartyMode) {
+                        createBalloon();
+                    }
+                }, 1000);
+                setTimeout(() => clearInterval(interval), 10000); // 10 saniye sonra dur
+            } else {
+                clearBalloons();
+            }
+        }
+
+        function clearBalloons() {
+            balloons.forEach(balloon => balloon.remove());
+            balloons = [];
+        }
+
         // ======== Flood Fill (Kova Doldur) ========
         function floodFill(x, y, fillColor) {
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -496,7 +636,6 @@
             const targetColor = getPixelColor(x, y, pixels);
             const fillColorRGB = hexToRGB(fillColor);
 
-            // Toleranslı renk karşılaştırma
             if (colorsMatch(targetColor, fillColorRGB, 30)) return;
 
             const stack = [[x, y]];
@@ -546,8 +685,23 @@
             return [r, g, b, 255];
         }
 
+        // ======== Geri Alma (Undo) ========
+        function undo() {
+            if (drawings.length > 0 || shapes.length > 0) {
+                if (drawings.length > 0) {
+                    drawings.pop(); // Son çizimi kaldır
+                } else if (shapes.length > 0) {
+                    shapes.pop(); // Son şekli kaldır
+                }
+                redrawCanvas();
+            }
+        }
+        undoBtn.addEventListener('click', undo);
+
         // ======== Temizle, Kaydet, Dosya Yükle ========
         clearBtn.addEventListener('click', () => {
+            drawings = [];
+            shapes = [];
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             if (currentImageIndex >= 0 && images.length > 0) {
                 loadImage(images[currentImageIndex]);
@@ -568,6 +722,8 @@
                 img.onload = () => {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    drawings = [];
+                    shapes = [];
                 };
                 img.src = URL.createObjectURL(file);
                 currentImageIndex = -1;
@@ -576,7 +732,6 @@
 
         // ======== Resim yükleme (orantılı çizim + preload desteği) ========
         function loadImage(src, redraw = true) {
-            // Önceden yüklenmiş resim nesnesi varsa onu kullan
             const preloadedImg = preloadedImages[images.indexOf(src)];
             if (!preloadedImg) return;
 
@@ -584,7 +739,6 @@
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
             }
 
-            // Canvas'a sığacak şekilde orantılı çizim
             const scale = Math.min(canvas.width / preloadedImg.width, canvas.height / preloadedImg.height);
             const newWidth = preloadedImg.width * scale;
             const newHeight = preloadedImg.height * scale;
@@ -592,6 +746,7 @@
             const offsetY = (canvas.height - newHeight) / 2;
 
             ctx.drawImage(preloadedImg, offsetX, offsetY, newWidth, newHeight);
+            if (redraw) redrawCanvas();
         }
 
         // ======== Resim değiştirme butonları ========
@@ -615,6 +770,131 @@
         if (images.length > 0) {
             loadImage(images[currentImageIndex]);
         }
+
+        // ======== Oyun Menüsü ========
+        let gameActive = false;
+        function startBalloonGame() {
+            if (!gameActive) {
+                gameActive = true;
+                clearCanvasForGame();
+                createBalloonsForGame();
+            }
+        }
+
+        function startColorMatchGame() {
+            if (!gameActive) {
+                gameActive = true;
+                clearCanvasForGame();
+                createColorMatchGame();
+            }
+        }
+
+        function clearCanvasForGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawings = [];
+            shapes = [];
+        }
+
+        function createBalloonsForGame() {
+            const gameBalloons = [];
+            function createGameBalloon() {
+                const balloon = document.createElement('div');
+                balloon.classList.add('balloon');
+                const x = Math.random() * (canvas.width - 50);
+                const y = canvas.height;
+                balloon.style.left = `${x}px`;
+                balloon.style.top = `${y}px`;
+                balloon.addEventListener('click', () => popGameBalloon(balloon));
+                document.body.appendChild(balloon);
+                gameBalloons.push(balloon);
+                animateGameBalloon(balloon);
+            }
+
+            function animateGameBalloon(balloon) {
+                let pos = canvas.height;
+                function move() {
+                    if (gameActive && pos > -70) {
+                        pos -= 1;
+                        balloon.style.top = `${pos}px`;
+                        requestAnimationFrame(move);
+                    } else {
+                        balloon.remove();
+                        gameBalloons = gameBalloons.filter(b => b !== balloon);
+                        if (gameBalloons.length === 0) endGame();
+                    }
+                }
+                move();
+            }
+
+            function popGameBalloon(balloon) {
+                const effect = document.createElement('div');
+                effect.classList.add('party-effect');
+                effect.style.left = `${parseFloat(balloon.style.left) + 25}px`;
+                effect.style.top = `${parseFloat(balloon.style.top) + 35}px`;
+                effect.style.width = '50px';
+                effect.style.height = '50px';
+                effect.style.background = balloon.style.background;
+                document.body.appendChild(effect);
+                setTimeout(() => effect.remove(), 1000);
+                balloon.remove();
+                gameBalloons = gameBalloons.filter(b => b !== balloon);
+            }
+
+            for (let i = 0; i < 5; i++) {
+                createGameBalloon();
+            }
+        }
+
+        function createColorMatchGame() {
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff'];
+            const circles = [];
+            for (let i = 0; i < 5; i++) {
+                const x = 50 + i * 120;
+                const y = 200;
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                ctx.beginPath();
+                ctx.arc(x, y, 30, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+                circles.push({ x, y, color });
+            }
+            const targetColor = colors[Math.floor(Math.random() * colors.length)];
+            ctx.fillStyle = targetColor;
+            ctx.fillRect(50, 50, 100, 50);
+            ctx.font = '20px Arial';
+            ctx.fillStyle = '#000';
+            ctx.fillText('Eşleştir:', 60, 80);
+
+            canvas.addEventListener('click', handleColorMatch, { once: true });
+
+            function handleColorMatch(e) {
+                const x = e.clientX - canvas.offsetLeft;
+                const y = e.clientY - canvas.offsetTop;
+                for (let circle of circles) {
+                    const dx = x - circle.x;
+                    const dy = y - circle.y;
+                    if (Math.sqrt(dx * dx + dy * dy) < 30) {
+                        if (circle.color === targetColor) {
+                            alert('Tebrikler! Doğru eşleştirme!');
+                        } else {
+                            alert('Yanlış! Tekrar dene.');
+                        }
+                        endGame();
+                        break;
+                    }
+                }
+            }
+        }
+
+        function endGame() {
+            gameActive = false;
+            redrawCanvas();
+        }
+
+        balloonGameBtn.addEventListener('click', startBalloonGame);
+        colorMatchGameBtn.addEventListener('click', startColorMatchGame);
     </script>
 </body>
 </html>
