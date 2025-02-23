@@ -390,13 +390,15 @@
         canvas.addEventListener('mousemove', draw);
         canvas.addEventListener('mouseup', stopDrawing);
         canvas.addEventListener('mouseout', stopDrawing);
-        canvas.addEventListener('click', handleCanvasClick); // Balon patlatma için
+        canvas.addEventListener('click', handleCanvasClick); // Balon ve parti efekti için
 
         canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             const touch = e.touches[0];
             if (currentTool === 'fill') {
-                floodFill(touch.clientX, touch.clientY, currentColor);
+                floodFill(touch.clientX - canvas.offsetLeft, touch.clientY - canvas.offsetTop, currentColor);
+            } else if (currentTool === 'party' && isPartyMode) {
+                createPartyEffect(touch.clientX, touch.clientY);
             } else {
                 startDrawing({ clientX: touch.clientX, clientY: touch.clientY });
             }
@@ -410,10 +412,10 @@
 
         function startDrawing(e) {
             if (currentTool === 'fill') {
-                floodFill(e.clientX, e.clientY, currentColor);
+                floodFill(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop, currentColor);
             } else if (['rect', 'circle', 'triangle', 'line'].includes(currentTool)) {
                 isShapeDrawing = true;
-                shapeStartX = e.clientX - canvas.offsetLeft; // Canvas offset'ini hesaba kat
+                shapeStartX = e.clientX - canvas.offsetLeft;
                 shapeStartY = e.clientY - canvas.offsetTop;
             } else if (currentTool === 'party' && isPartyMode) {
                 createPartyEffect(e.clientX, e.clientY);
@@ -599,12 +601,14 @@
 
         function toggleBalloons() {
             if (isPartyMode) {
-                const interval = setInterval(() => {
-                    if (balloons.length < 10 && isPartyMode) {
-                        createBalloon();
-                    }
-                }, 1000);
-                setTimeout(() => clearInterval(interval), 10000); // 10 saniye sonra dur
+                if (balloons.length === 0) { // Sadece balon yoksa oluştur
+                    const interval = setInterval(() => {
+                        if (balloons.length < 10 && isPartyMode) {
+                            createBalloon();
+                        }
+                    }, 1000);
+                    setTimeout(() => clearInterval(interval), 10000); // 10 saniye sonra dur
+                }
             } else {
                 clearBalloons();
             }
@@ -617,16 +621,18 @@
 
         function handleCanvasClick(e) {
             if (isPartyMode) {
+                createPartyEffect(e.clientX, e.clientY); // Parti efekti ekle
+                // Balonlara tıklandıysa patlat
                 balloons.forEach(balloon => {
                     const balloonRect = balloon.getBoundingClientRect();
                     const canvasRect = canvas.getBoundingClientRect();
-                    const clickX = e.clientX - canvasRect.left;
-                    const clickY = e.clientY - canvasRect.top;
+                    const clickX = e.clientX;
+                    const clickY = e.clientY;
                     if (
-                        clickX >= balloonRect.left - canvasRect.left &&
-                        clickX <= balloonRect.right - canvasRect.left &&
-                        clickY >= balloonRect.top - canvasRect.top &&
-                        clickY <= balloonRect.bottom - canvasRect.top
+                        clickX >= balloonRect.left &&
+                        clickX <= balloonRect.right &&
+                        clickY >= balloonRect.top &&
+                        clickY <= balloonRect.bottom
                     ) {
                         popBalloon(balloon);
                     }
@@ -735,7 +741,7 @@
             }
         });
 
-        // ======== Resim yükleme (yalnızca ihtiyaç duyulduğunda yükleme) ========
+        // ======== Resim ve boş canvas değiştirme butonları ========
         function loadImage(src, redraw = true) {
             const img = new Image();
             img.crossOrigin = 'Anonymous';
@@ -756,7 +762,6 @@
             img.src = src;
         }
 
-        // ======== Resim ve boş canvas değiştirme butonları ========
         newCanvasBtn.addEventListener('click', () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             drawings = [];
