@@ -2,798 +2,289 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gizem'in Boyama Sayfası</title>
-    <link rel="icon" href="icon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Gizem'in Akıllı Çerçeveleri 🎨 v6.4</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
         body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            overflow: hidden;
-            background-color: #e9ecef;
-            touch-action: none;
+            font-family: 'Fredoka', sans-serif; background: #f0f2f5; margin: 0;
+            display: flex; flex-direction: column; align-items: center;
+            min-height: 100vh; color: #333; padding-top: 20px;
         }
-        #app-container {
-            display: flex;
-            height: 100vh;
-            position: relative;
+        .main-container { display: flex; gap: 20px; align-items: flex-start; }
+        #canvas-container { position: relative; border-radius: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+        canvas { position: absolute; top: 0; left: 0; border-radius: 15px; }
+        #object-canvas { z-index: 10; }
+        #drawing-canvas { z-index: 5; background-color: white; border: 2px solid #ccc; }
+        .toolbar {
+            display: flex; flex-direction: column; gap: 10px; background: white;
+            padding: 15px; border-radius: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.1);
         }
-        #toolbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 70px;
-            height: 100%;
-            background: linear-gradient(135deg, #ff6f61, #ff9f1c);
-            padding: 15px 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 15px;
-            transition: width 0.3s ease;
-            z-index: 1000;
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
-            overflow-y: auto;
+        .toolbar-section { border-top: 1px solid #eee; padding-top: 10px; margin-top: 5px; }
+        .toolbar-section h4 { margin: 0 0 10px 0; text-align: center; color: #555; }
+        .tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .tool-button {
+            padding: 10px; border-radius: 10px; border: 2px solid #ddd; font-size: 1.5em;
+            cursor: pointer; transition: all 0.2s; background-color: #f8f9fa;
+            display: flex; justify-content: center; align-items: center;
         }
-        #toolbar:hover {
-            width: 200px;
-        }
-        .tool-item {
-            width: 100%;
-            padding: 10px;
-            background: none;
-            border: none;
-            color: #fff;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transition: all 0.2s ease;
-        }
-        .tool-item i {
-            font-size: 20px;
-            width: 20px;
-        }
-        .tool-item span {
-            font-size: 14px;
-            opacity: 0;
-            transition: opacity 0.2s ease;
-        }
-        #toolbar:hover .tool-item span {
-            opacity: 1;
-        }
-        .tool-item:hover, .tool-item.active {
-            background: rgba(255, 255, 255, 0.2);
-            color: #ffeaa7;
-        }
-        #sub-menu {
-            position: fixed;
-            top: 0;
-            left: 70px;
-            width: 0;
-            height: 100%;
-            background: rgba(255, 111, 97, 0.95);
-            padding: 15px 0;
-            transition: width 0.3s ease;
-            overflow: hidden;
-            z-index: 999;
-        }
-        #sub-menu.active {
-            width: 250px;
-            padding: 15px;
-        }
-        .sub-section {
-            margin-bottom: 20px;
-            color: #fff;
-        }
-        .sub-section h3 {
-            font-size: 14px;
-            margin-bottom: 10px;
-            color: #ffeaa7;
-        }
-        #color-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 8px;
-        }
-        .color-option {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            border: 2px solid transparent;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .color-option:hover, .color-option.active {
-            border-color: #ffeaa7;
-            transform: scale(1.1);
-        }
-        .size-option {
-            width: 100%;
-            padding: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: #fff;
-            cursor: pointer;
-            text-align: center;
-            border-radius: 5px;
-            margin-bottom: 5px;
-            transition: all 0.2s ease;
-        }
-        .size-option:hover, .size-option.active {
-            background: #ffeaa7;
-            color: #ff6f61;
-        }
-        #canvas-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #fff;
-        }
-        #drawing-canvas {
-            width: 100%;
-            height: 100%;
-        }
-        #image-bar {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.9);
-            padding: 10px;
-            border-radius: 20px;
-            display: flex;
-            gap: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            z-index: 1000;
-        }
-        .image-btn {
-            width: 40px;
-            height: 40px;
-            border: none;
-            border-radius: 50%;
-            background: #ff9f1c;
-            color: #fff;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-        }
-        .image-btn:hover {
-            background: #ff6f61;
-            transform: scale(1.1);
-        }
-        .party-effect, .balloon {
-            position: absolute;
-            pointer-events: auto;
-            z-index: 500;
-        }
-        .party-effect {
-            animation: explode 1s ease-out forwards;
-        }
-        .balloon {
-            width: 50px;
-            height: 70px;
-            background: radial-gradient(circle, hsl(${Math.random() * 360}, 70%, 50%), hsl(${Math.random() * 360}, 70%, 30%));
-            border-radius: 50% 50% 70% 70%;
-            cursor: pointer;
-            animation: float 4s infinite ease-in-out;
-        }
-        .balloon:hover {
-            transform: scale(1.1);
-        }
-        @keyframes explode {
-            0% { transform: scale(0); opacity: 1; }
-            100% { transform: scale(2); opacity: 0; }
-        }
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-50px); }
-        }
-        @media (max-width: 768px) and (orientation: landscape) {
-            #toolbar {
-                height: auto;
-                max-height: 100vh;
-                overflow-y: auto;
-            }
-            #toolbar:hover {
-                width: 150px;
-            }
-            #sub-menu.active {
-                width: 200px;
-                left: 60px;
-            }
-        }
-        @media (max-width: 768px) {
-            #toolbar { width: 60px; }
-            #toolbar:hover { width: 150px; }
-            #sub-menu.active { width: 100%; left: 0; }
-            .image-btn { width: 35px; height: 35px; }
-        }
+        .tool-button:hover { border-color: #6c63ff; transform: scale(1.05); }
+        .tool-button.active { border-color: #6c63ff; background-color: #e0dfff; }
+        .color-picker-wrapper { padding: 5px; border: 2px solid #ddd; border-radius: 10px; }
     </style>
 </head>
 <body>
-    <div id="app-container">
+    <h1>Gizem'in Akıllı Çerçeveleri 🎨</h1>
+    <div class="main-container">
+        <div class="toolbar">
+            <h4>Araçlar</h4>
+            <div class="tool-grid">
+                <button class="tool-button active" data-tool="select" title="Seç ve Değiştir">✋</button>
+                <button class="tool-button" data-tool="draw" title="Serbest Çizim">✏️</button>
+                <button class="tool-button" data-tool="line" title="Düz Çizgi">📏</button>
+                <button class="tool-button" data-tool="fill" id="fill-tool-button" title="Boya Kovası">🎨</button>
+            </div>
+            <div class="toolbar-section">
+                <h4>Şekiller</h4>
+                <div class="tool-grid">
+                    <button class="tool-button" data-tool="rect" title="Kare">⬜</button>
+                    <button class="tool-button" data-tool="circle" title="Daire">⚪</button>
+                    <button class="tool-button" data-tool="triangle" title="Üçgen">🔺</button>
+                </div>
+            </div>
+            <div class="toolbar-section">
+                <h4>Figürler</h4>
+                <div class="tool-grid">
+                    <button class="tool-button" data-tool="house" title="Ev">🏠</button>
+                    <button class="tool-button" data-tool="tree" title="Ağaç">🌳</button>
+                    <button class="tool-button" data-tool="balloon" title="Balon">🎈</button>
+                    <button class="tool-button" data-tool="stickman" title="Çöp Adam">🧍</button>
+                </div>
+            </div>
+            <div class="toolbar-section">
+                <h4>Renk & Boyut</h4>
+                <div class="color-picker-wrapper"><input type="color" id="color-picker" value="#3498db"></div>
+                <input type="range" id="brush-size" min="2" max="50" value="5" title="Çizgi/Kenar Kalınlığı">
+            </div>
+            <div class="toolbar-section">
+                <button id="delete-button" style="width:100%; background-color:#e74c3c; color:white;">Seçili Nesneyi Sil</button>
+                <button id="clear-button" style="width:100%; margin-top:10px;">Tuvali Temizle</button>
+            </div>
+        </div>
         <div id="canvas-container">
             <canvas id="drawing-canvas"></canvas>
-        </div>
-
-        <div id="toolbar">
-            <button class="tool-item active" data-tool="brush"><i class="fas fa-paint-brush"></i><span>Fırça</span></button>
-            <button class="tool-item" data-tool="eraser"><i class="fas fa-eraser"></i><span>Silgi</span></button>
-            <button class="tool-item" data-tool="rainbow"><i class="fas fa-rainbow"></i><span>Gökkuşağı</span></button>
-            <button class="tool-item" data-tool="party"><i class="fas fa-star"></i><span>Parti</span></button>
-            <button class="tool-item" data-tool="rect"><i class="fas fa-square"></i><span>Dikdörtgen</span></button>
-            <button class="tool-item" data-tool="circle"><i class="fas fa-circle"></i><span>Daire</span></button>
-            <button class="tool-item" data-tool="triangle"><i class="fas fa-play" style="transform: rotate(90deg);"></i><span>Üçgen</span></button>
-            <button class="tool-item" data-tool="line"><i class="fas fa-minus" style="transform: rotate(45deg);"></i><span>Çizgi</span></button>
-            <button class="tool-item" data-tool="fill"><i class="fas fa-fill-drip"></i><span>Doldur</span></button>
-            <button class="tool-item" id="undo-btn"><i class="fas fa-undo"></i><span>Geri Al</span></button>
-            <button class="tool-item" data-sub="colors"><i class="fas fa-palette"></i><span>Renkler</span></button>
-            <button class="tool-item" data-sub="sizes"><i class="fas fa-ruler"></i><span>Boyut</span></button>
-            <button class="tool-item" id="clear-btn"><i class="fas fa-trash"></i><span>Temizle</span></button>
-            <button class="tool-item" id="save-btn"><i class="fas fa-save"></i><span>Kaydet</span></button>
-            <label class="tool-item" for="file-input"><i class="fas fa-upload"></i><span>Yükle</span></label>
-            <input type="file" id="file-input" accept="image/*" style="display: none;">
-        </div>
-
-        <div id="sub-menu">
-            <div class="sub-section" id="colors-section">
-                <h3>Renkler</h3>
-                <div id="color-grid"></div>
-            </div>
-            <div class="sub-section" id="sizes-section">
-                <h3>Boyut</h3>
-                <button class="size-option active" data-size="5">5px</button>
-                <button class="size-option" data-size="15">15px</button>
-                <button class="size-option" data-size="30">30px</button>
-                <button class="size-option" data-size="45">45px</button>
-                <button class="size-option" data-size="60">60px</button>
-            </div>
-        </div>
-
-        <div id="image-bar">
-            <button class="image-btn" id="new-canvas-btn"><i class="fas fa-file"></i></button>
-            <button class="image-btn" id="prev-image"><i class="fas fa-chevron-left"></i></button>
-            <button class="image-btn" id="next-image"><i class="fas fa-chevron-right"></i></button>
-            <button class="image-btn" id="random-image"><i class="fas fa-dice"></i></button>
+            <canvas id="object-canvas"></canvas>
         </div>
     </div>
 
     <script>
-        // ======== Canvas ve değişkenler ========
-        const canvas = document.getElementById('drawing-canvas');
-        const ctx = canvas.getContext('2d');
-        const toolbar = document.getElementById('toolbar');
-        const subMenu = document.getElementById('sub-menu');
-        const colorGrid = document.getElementById('color-grid');
-        const toolItems = document.querySelectorAll('.tool-item');
-        const sizeOptions = document.querySelectorAll('.size-option');
-        const clearBtn = document.getElementById('clear-btn');
-        const saveBtn = document.getElementById('save-btn');
-        const fileInput = document.getElementById('file-input');
-        const undoBtn = document.getElementById('undo-btn');
-        const newCanvasBtn = document.getElementById('new-canvas-btn');
-        const prevImageBtn = document.getElementById('prev-image');
-        const nextImageBtn = document.getElementById('next-image');
-        const randomImageBtn = document.getElementById('random-image');
+        const SVG_ICONS = {
+            house: `data:image/svg+xml;base64,${btoa('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50 10 L10 50 H20 V90 H80 V50 H90 Z M30 80 V60 H70 V80 Z" stroke="black" fill="#f5a623" stroke-width="2"/></svg>')}`,
+            tree: `data:image/svg+xml;base64,${btoa('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="45" y="60" width="10" height="30" fill="#8b5a2b"/><circle cx="50" cy="40" r="30" fill="#4caf50"/></svg>')}`,
+            balloon: `data:image/svg+xml;base64,${btoa('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50 90 L50 80" stroke="black"/><ellipse cx="50" cy="45" rx="35" ry="40" fill="#e94e77"/></svg>')}`,
+            stickman: `data:image/svg+xml;base64,${btoa('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="20" r="10" fill="none" stroke="black" stroke-width="3"/><line x1="50" y1="30" x2="50" y2="60" stroke="black" stroke-width="3"/><line x1="50" y1="40" x2="30" y2="50" stroke="black" stroke-width="3"/><line x1="50" y1="40" x2="70" y2="50" stroke="black" stroke-width="3"/><line x1="50" y1="60" x2="30" y2="80" stroke="black" stroke-width="3"/><line x1="50" y1="60" x2="70" y2="80" stroke="black" stroke-width="3"/></svg>')}`
+        };
 
-        let isDrawing = false;
-        let currentTool = 'brush';
-        let currentColor = '#000000';
-        let currentSize = 5;
-        let lastX = 0;
-        let lastY = 0;
-        let hue = 0;
-        let isPartyMode = false;
-        let isShapeDrawing = false;
-        let shapeStartX = 0;
-        let shapeStartY = 0;
-        let shapeSize = 50;
-        let hasBackgroundImage = false; // Arka plan resmi olup olmadığını takip etmek için
+        const drawingCanvas = document.getElementById('drawing-canvas');
+        const drawingCtx = drawingCanvas.getContext('2d');
+        const objectCanvas = document.getElementById('object-canvas');
+        const objectCtx = objectCanvas.getContext('2d');
+        
+        const canvasContainer = document.getElementById('canvas-container');
+        const colorPicker = document.getElementById('color-picker');
+        const brushSize = document.getElementById('brush-size');
+        const toolbar = document.querySelector('.toolbar');
+        const fillToolButton = document.getElementById('fill-tool-button');
 
-        // Çizimleri ve şekilleri saklamak için bir dizi
-        let drawings = []; // Fırça, silgi, gökkuşağı için path'ler
-        let shapes = [];   // Şekiller için (rect, circle, triangle, line)
+        let canvasObjects = [];
+        let currentMode = 'select';
+        let isDown = false;
+        let startX, startY;
+        let selectedObject = null;
+        let resizeHandle = null;
+        let tempLine = null;
 
-        // ======== Yeni PNG listesi (images) ========
-        const images = [
-            'https://raw.githubusercontent.com/showman1907/duck/main/images/6Trpq8GTK-1.png',
-            'https://raw.githubusercontent.com/showman1907/duck/main/images/9i4bpKB5T-1.png',
-            'https://raw.githubusercontent.com/showman1907/duck/main/images/RTdRyX5qc-1.png',
-            'https://raw.githubusercontent.com/showman1907/duck/main/images/RcAy9z6Ai-1.png',
-            'https://raw.githubusercontent.com/showman1907/duck/main/images/biyp58y4T-1.png',
-            'https://raw.githubusercontent.com/showman1907/duck/main/images/di6ayq55T-1.png',
-            'https://raw.githubusercontent.com/showman1907/duck/main/images/dj7jyqK7T-1.png',
-            'https://raw.githubusercontent.com/showman1907/duck/main/images/kcMMz4Bcj-1.png',
-            'https://raw.githubusercontent.com/showman1907/duck/main/images/kiKRGxKrT-1.png',
-            'https://raw.githubusercontent.com/showman1907/duck/main/images/rcLoGxpc8-1.png'
-        ];
-        let currentImageIndex = -1; // Boş sayfa için varsayılan -1
-
-        // ======== Canvas boyutlandırma ========
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            redrawCanvas();
+        function setCanvasSize() {
+            const w = window.innerWidth * 0.7;
+            const h = window.innerHeight * 0.8;
+            canvasContainer.style.width = `${w}px`;
+            canvasContainer.style.height = `${h}px`;
+            drawingCanvas.width = objectCanvas.width = w;
+            drawingCanvas.height = objectCanvas.height = h;
+            redrawObjectCanvas();
         }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-
-        // ======== Renk paleti ========
-        const colors = [
-            '#000000', '#ffffff', '#ff0000', '#00ff00', '#0000ff',
-            '#ffff00', '#ff00ff', '#00ffff', '#ff8000', '#8000ff',
-            '#008080', '#ff0080', '#808080', '#ffa500', '#800080', '#008000',
-            '#ff4040', '#40ff40', '#4040ff', '#ffff80', '#ff80ff', '#80ffff',
-            '#ffbf00', '#bf00ff', '#00bfbf', '#ff00bf', '#bfbfbf', '#ffbfbf'
-        ];
-        colors.forEach(color => {
-            const btn = document.createElement('button');
-            btn.classList.add('color-option');
-            btn.style.backgroundColor = color;
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.color-option').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                currentColor = color;
-                currentTool = 'brush';
-            });
-            colorGrid.appendChild(btn);
-        });
-
-        // ======== Araç çubuğu (tool) olayları ========
-        toolItems.forEach(item => {
-            item.addEventListener('click', () => {
-                if (item.dataset.tool) {
-                    toolItems.forEach(i => i.classList.remove('active'));
-                    item.classList.add('active');
-                    currentTool = item.dataset.tool;
-                    subMenu.classList.remove('active');
-
-                    if (currentTool === 'party') {
-                        isPartyMode = !isPartyMode;
-                        item.style.color = isPartyMode ? '#ffeaa7' : '#fff';
-                        toggleBalloons();
-                    } else {
-                        isPartyMode = false;
-                        document.querySelector('[data-tool="party"]').style.color = '#fff';
-                        clearBalloons();
-                    }
-                } else if (item.dataset.sub) {
-                    subMenu.classList.toggle('active');
-                    document.querySelectorAll('.sub-section').forEach(s => s.style.display = 'none');
-                    document.getElementById(`${item.dataset.sub}-section`).style.display = 'block';
-                }
-            });
-        });
-
-        // ======== Boyut seçenekleri ========
-        sizeOptions.forEach(btn => {
-            btn.addEventListener('click', () => {
-                sizeOptions.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                currentSize = parseInt(btn.dataset.size);
-                shapeSize = currentSize;
-            });
-        });
-
-        // ======== Çizim ve dokunma olayları ========
-        canvas.addEventListener('mousedown', startDrawing);
-        canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseup', stopDrawing);
-        canvas.addEventListener('mouseout', stopDrawing);
-        canvas.addEventListener('click', handleCanvasClick); // Balon patlatma için
-
-        canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            const touch = e.touches[0];
-            if (currentTool === 'fill') {
-                floodFill(touch.clientX, touch.clientY, currentColor);
-            } else {
-                startDrawing({ clientX: touch.clientX, clientY: touch.clientY });
-            }
-        });
-        canvas.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            const touch = e.touches[0];
-            draw({ clientX: touch.clientX, clientY: touch.clientY });
-        });
-        canvas.addEventListener('touchend', stopDrawing);
-
-        function startDrawing(e) {
-            if (currentTool === 'fill') {
-                floodFill(e.clientX, e.clientY, currentColor);
-            } else if (['rect', 'circle', 'triangle', 'line'].includes(currentTool)) {
-                isShapeDrawing = true;
-                shapeStartX = e.clientX - canvas.offsetLeft;
-                shapeStartY = e.clientY - canvas.offsetTop;
-            } else if (currentTool === 'party' && isPartyMode) {
-                createPartyEffect(e.clientX, e.clientY);
-            } else {
-                isDrawing = true;
-                [lastX, lastY] = [e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop];
-                drawings.push({ tool: currentTool, color: currentColor, size: currentSize, points: [[lastX, lastY]] });
-            }
+        
+        function redrawObjectCanvas() {
+            objectCtx.clearRect(0, 0, objectCanvas.width, objectCanvas.height);
+            canvasObjects.forEach(obj => obj.draw(objectCtx));
+            if (selectedObject) selectedObject.drawSelection(objectCtx);
+            if(tempLine) tempLine.draw(objectCtx);
         }
-
-        function draw(e) {
-            if (currentTool === 'fill') return;
-            if (isDrawing && !['rect', 'circle', 'triangle', 'line', 'party'].includes(currentTool)) {
-                ctx.beginPath();
-                ctx.moveTo(lastX, lastY);
-                ctx.lineTo(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop);
-                ctx.lineWidth = currentSize;
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-
-                switch (currentTool) {
-                    case 'brush': 
-                        ctx.strokeStyle = currentColor;
-                        break;
-                    case 'eraser': 
-                        ctx.strokeStyle = '#ffffff';
-                        break;
-                    case 'rainbow': 
-                        ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
-                        hue = (hue + 1) % 360;
-                        break;
-                }
-                ctx.stroke();
-                drawings[drawings.length - 1].points.push([e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop]);
-                [lastX, lastY] = [e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop];
-            } else if (isShapeDrawing) {
-                shapeSize = Math.max(
-                    10,
-                    Math.sqrt(
-                        Math.pow((e.clientX - canvas.offsetLeft) - shapeStartX, 2) + 
-                        Math.pow((e.clientY - canvas.offsetTop) - shapeStartY, 2)
-                    )
-                );
-                redrawCanvas();
-                drawShape(shapeStartX, shapeStartY, shapeSize);
-            }
-        }
-
-        function stopDrawing() {
-            if (isShapeDrawing) {
-                const shape = {
-                    tool: currentTool,
-                    startX: shapeStartX,
-                    startY: shapeStartY,
-                    size: shapeSize,
-                    color: currentColor
-                };
-                shapes.push(shape);
-                isShapeDrawing = false;
-            } else {
-                isDrawing = false;
-            }
-        }
-
-        function drawShape(x, y, size) {
-            ctx.beginPath();
-            ctx.strokeStyle = currentColor;
-            ctx.lineWidth = 2;
-
-            switch (currentTool) {
-                case 'rect':
-                    ctx.strokeRect(x - size / 2, y - size / 2, size, size);
-                    break;
-                case 'circle':
-                    ctx.arc(x, y, size / 2, 0, Math.PI * 2);
-                    ctx.stroke();
-                    break;
-                case 'triangle':
-                    ctx.moveTo(x, y - size / 2);
-                    ctx.lineTo(x - size / 2, y + size / 2);
-                    ctx.lineTo(x + size / 2, y + size / 2);
-                    ctx.closePath();
-                    ctx.stroke();
-                    break;
-                case 'line':
-                    ctx.moveTo(x - size / 2, y);
-                    ctx.lineTo(x + size / 2, y);
-                    ctx.stroke();
-                    break;
-            }
-        }
-
-        // ======== Canvas'ı yeniden çizme (şekil ve çizimler dahil) ========
-        function redrawCanvas() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            if (hasBackgroundImage && currentImageIndex >= 0 && images.length > 0) {
-                loadImage(images[currentImageIndex], false);
-            }
-            // Çizimleri yeniden çiz
-            drawings.forEach(drawing => {
-                ctx.beginPath();
-                ctx.moveTo(drawing.points[0][0], drawing.points[0][1]);
-                for (let i = 1; i < drawing.points.length; i++) {
-                    ctx.lineTo(drawing.points[i][0], drawing.points[i][1]);
-                }
-                ctx.lineWidth = drawing.size;
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-                ctx.strokeStyle = drawing.color;
-                if (drawing.tool === 'rainbow') {
-                    ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`; // Basit simülasyon
-                } else if (drawing.tool === 'eraser') {
-                    ctx.strokeStyle = '#ffffff';
-                }
-                ctx.stroke();
-            });
-            // Şekilleri yeniden çiz
-            shapes.forEach(shape => {
-                currentTool = shape.tool;
-                currentColor = shape.color;
-                drawShape(shape.startX, shape.startY, shape.size);
-            });
-            currentTool = document.querySelector('.tool-item.active').dataset.tool || 'brush';
-        }
-
-        canvas.addEventListener('wheel', (e) => {
-            if (['rect', 'circle', 'triangle', 'line'].includes(currentTool)) {
-                e.preventDefault();
-                shapeSize = Math.max(10, Math.min(200, shapeSize + (e.deltaY < 0 ? 10 : -10)));
-            }
-        });
-
-        // ======== Parti efekti ve balonlar ========
-        function createPartyEffect(x, y) {
-            const effect = document.createElement('div');
-            effect.classList.add('party-effect');
-            effect.style.left = `${x - 25}px`;
-            effect.style.top = `${y - 25}px`;
-            effect.style.width = '50px';
-            effect.style.height = '50px';
-            effect.style.background = `radial-gradient(circle, hsl(${Math.random() * 360}, 100%, 50%), transparent)`;
-            document.body.appendChild(effect);
-            setTimeout(() => effect.remove(), 1000);
-        }
-
-        let balloons = [];
-        function createBalloon() {
-            const balloon = document.createElement('div');
-            balloon.classList.add('balloon');
-            const x = Math.random() * (canvas.width - 50);
-            const y = canvas.height;
-            balloon.style.left = `${x}px`;
-            balloon.style.top = `${y}px`;
-            balloon.addEventListener('click', () => popBalloon(balloon));
-            document.body.appendChild(balloon);
-            balloons.push(balloon);
-            animateBalloon(balloon);
-        }
-
-        function animateBalloon(balloon) {
-            let pos = canvas.height;
-            const speed = 1;
-            function move() {
-                if (isPartyMode && pos > -70) {
-                    pos -= speed;
-                    balloon.style.top = `${pos}px`;
-                    requestAnimationFrame(move);
-                } else if (!isPartyMode) {
-                    balloon.remove();
-                    balloons = balloons.filter(b => b !== balloon);
+        
+        class CanvasObject {
+            constructor(x, y, w, h, color, strokeWidth) { this.x = x; this.y = y; this.w = w; this.h = h; this.color = color; this.strokeWidth = strokeWidth; }
+            drawSelection(ctx) {
+                ctx.strokeStyle = '#6c63ff'; ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]); ctx.strokeRect(this.x, this.y, this.w, this.h); ctx.setLineDash([]);
+                const handles = this.getHandles();
+                for (const handle in handles) {
+                    ctx.fillStyle = 'white'; ctx.strokeStyle = '#6c63ff';
+                    ctx.fillRect(handles[handle].x, handles[handle].y, 8, 8);
+                    ctx.strokeRect(handles[handle].x, handles[handle].y, 8, 8);
                 }
             }
-            move();
+            getHandles() { return { tl: { x: this.x - 4, y: this.y - 4 }, tr: { x: this.x + this.w - 4, y: this.y - 4 }, bl: { x: this.x - 4, y: this.y + this.h - 4 }, br: { x: this.x + this.w - 4, y: this.y + this.h - 4 } }; }
+            isPointInside(px, py) { return px >= this.x && px <= this.x + this.w && py >= this.y && py <= this.y + this.h; }
         }
 
-        function popBalloon(balloon) {
-            const effect = document.createElement('div');
-            effect.classList.add('party-effect');
-            effect.style.left = `${parseFloat(balloon.style.left) + 25}px`;
-            effect.style.top = `${parseFloat(balloon.style.top) + 35}px`;
-            effect.style.width = '50px';
-            effect.style.height = '50px';
-            effect.style.background = balloon.style.background;
-            document.body.appendChild(effect);
-            setTimeout(() => effect.remove(), 1000);
-            balloon.remove();
-            balloons = balloons.filter(b => b !== balloon);
-        }
-
-        function toggleBalloons() {
-            if (isPartyMode) {
-                // Her 1 saniyede bir, maksimum 10 balon oluştur
-                const interval = setInterval(() => {
-                    if (balloons.length < 10 && isPartyMode) {
-                        createBalloon();
-                    }
-                }, 1000);
-                // 10 saniye sonra durdur
-                setTimeout(() => clearInterval(interval), 10000);
-            } else {
-                clearBalloons();
+        // --- ŞEKİL SINIFLARI GÜNCELLENDİ (artık içi boş çiziyorlar) ---
+        class Rect extends CanvasObject { draw(ctx) { ctx.strokeStyle = this.color; ctx.lineWidth = this.strokeWidth; ctx.strokeRect(this.x, this.y, this.w, this.h); } }
+        class Circle extends CanvasObject { draw(ctx) { ctx.strokeStyle = this.color; ctx.lineWidth = this.strokeWidth; ctx.beginPath(); ctx.arc(this.x + this.w / 2, this.y + this.h / 2, this.w / 2, 0, Math.PI * 2); ctx.stroke(); } }
+        class Triangle extends CanvasObject {
+            draw(ctx) {
+                ctx.strokeStyle = this.color; ctx.lineWidth = this.strokeWidth; ctx.beginPath();
+                ctx.moveTo(this.x + this.w / 2, this.y); ctx.lineTo(this.x, this.y + this.h); ctx.lineTo(this.x + this.w, this.y + this.h);
+                ctx.closePath(); ctx.stroke();
             }
         }
+        class Img extends CanvasObject { constructor(x, y, w, h, src) { super(x, y, w, h, null); this.img = new Image(); this.img.src = src; this.img.onload = () => redrawObjectCanvas(); } draw(ctx) { ctx.drawImage(this.img, this.x, this.y, this.w, this.h); } }
+        class Line extends CanvasObject { constructor(x1, y1, x2, y2, color, width) { super(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x1 - x2), Math.abs(y1 - y2), color, width); this.x1 = x1; this.y1 = y1; this.x2 = x2; this.y2 = y2; } draw(ctx) { ctx.strokeStyle = this.color; ctx.lineWidth = this.strokeWidth; ctx.beginPath(); ctx.moveTo(this.x1, this.y1); ctx.lineTo(this.x2, this.y2); ctx.stroke(); } isPointInside(px, py) { return false; } }
 
-        function clearBalloons() {
-            balloons.forEach(balloon => balloon.remove());
-            balloons = [];
-        }
-
-        function handleCanvasClick(e) {
-            if (isPartyMode) {
-                balloons.forEach(balloon => {
-                    const balloonRect = balloon.getBoundingClientRect();
-                    const canvasRect = canvas.getBoundingClientRect();
-                    const clickX = e.clientX - canvasRect.left;
-                    const clickY = e.clientY - canvasRect.top;
-                    if (
-                        clickX >= balloonRect.left - canvasRect.left &&
-                        clickX <= balloonRect.right - canvasRect.left &&
-                        clickY >= balloonRect.top - canvasRect.top &&
-                        clickY <= balloonRect.bottom - canvasRect.top
-                    ) {
-                        popBalloon(balloon);
-                    }
-                });
+        function addObject(tool, x, y) {
+            const color = colorPicker.value;
+            const width = brushSize.value;
+            let obj;
+            switch (tool) {
+                // YENİ: Şekiller artık çizgi kalınlığı da alıyor
+                case 'rect': obj = new Rect(x, y, 100, 100, color, width); break;
+                case 'circle': obj = new Circle(x, y, 100, 100, color, width); break;
+                case 'triangle': obj = new Triangle(x, y, 100, 100, color, width); break;
+                case 'house': case 'tree': case 'balloon': case 'stickman': obj = new Img(x, y, 100, 100, SVG_ICONS[tool]); break;
             }
+            if (obj) { canvasObjects.push(obj); selectedObject = obj; currentMode = 'select'; updateActiveToolButton(); redrawObjectCanvas(); }
+        }
+        
+        function updateActiveToolButton() {
+            document.querySelectorAll('.tool-button').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.querySelector(`.tool-button[data-tool="${currentMode}"]`);
+            if (activeBtn) activeBtn.classList.add('active');
+            objectCanvas.style.cursor = (currentMode === 'select') ? 'default' : (currentMode === 'fill' ? `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" style="font-size: 24px;"><text y="24">🎨</text></svg>'), auto` : 'crosshair');
         }
 
-        // ======== Flood Fill (Kova Doldur) ========
-        function floodFill(x, y, fillColor) {
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const pixels = imageData.data;
-            const targetColor = getPixelColor(x - canvas.offsetLeft, y - canvas.offsetTop, pixels);
-            const fillColorRGB = hexToRGB(fillColor);
+        toolbar.addEventListener('click', (e) => { if (e.target.closest('.tool-button')) { currentMode = e.target.closest('.tool-button').dataset.tool; updateActiveToolButton(); } });
+        document.getElementById('delete-button').addEventListener('click', () => { if (selectedObject) { canvasObjects = canvasObjects.filter(obj => obj !== selectedObject); selectedObject = null; redrawObjectCanvas(); } });
+        document.getElementById('clear-button').addEventListener('click', () => { if (confirm("Tüm çizimleri ve nesneleri silmek istediğinizden emin misiniz?")) { canvasObjects = []; selectedObject = null; drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height); redrawObjectCanvas(); } });
+        colorPicker.addEventListener('input', (e) => { fillToolButton.style.color = e.target.value; });
 
-            if (colorsMatch(targetColor, fillColorRGB, 30)) return;
 
-            const stack = [[x - canvas.offsetLeft, y - canvas.offsetTop]];
-            while (stack.length) {
-                const [currentX, currentY] = stack.pop();
-                const pos = (currentY * canvas.width + currentX) * 4;
+        // YENİ: Geliştirilmiş Boyama (Flood Fill) Fonksiyonu
+        function floodFill(startX, startY, fillColor) {
+            // 1. Adım: Her iki katmanı birleştiren geçici bir tuval oluştur
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = drawingCanvas.width;
+            tempCanvas.height = drawingCanvas.height;
+            tempCtx.drawImage(drawingCanvas, 0, 0); // Alttaki çizim katmanını çiz
+            tempCtx.drawImage(objectCanvas, 0, 0); // Üstteki nesne katmanını çiz
 
-                if (
-                    currentX >= 0 && currentX < canvas.width &&
-                    currentY >= 0 && currentY < canvas.height &&
-                    colorsMatch(getPixelColor(currentX, currentY, pixels), targetColor, 30)
-                ) {
-                    setPixelColor(pos, fillColorRGB, pixels);
-                    stack.push([currentX + 1, currentY]);
-                    stack.push([currentX - 1, currentY]);
-                    stack.push([currentX, currentY + 1]);
-                    stack.push([currentX, currentY - 1]);
-                }
-            }
+            // 2. Adım: Boyama algoritmasını bu birleşik tuval üzerinde çalıştır
+            const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+            // ... (Geri kalan flood fill mantığı öncekiyle aynı, sadece 'imageData' ve 'tempCanvas' kullanıyor)
+            const data = imageData.data;
+            const startPos = (startY * tempCanvas.width + startX) * 4;
+            const startR = data[startPos];
+            const startG = data[startPos + 1];
+            const startB = data[startPos + 2];
 
-            ctx.putImageData(imageData, 0, 0);
-        }
-
-        function getPixelColor(x, y, pixels) {
-            const pos = (y * canvas.width + x) * 4;
-            return [pixels[pos], pixels[pos + 1], pixels[pos + 2], pixels[pos + 3]];
-        }
-
-        function setPixelColor(pos, color, pixels) {
-            pixels[pos] = color[0];
-            pixels[pos + 1] = color[1];
-            pixels[pos + 2] = color[2];
-            pixels[pos + 3] = 255;
-        }
-
-        function colorsMatch(color1, color2, tolerance = 0) {
-            return Math.abs(color1[0] - color2[0]) <= tolerance &&
-                   Math.abs(color1[1] - color2[1]) <= tolerance &&
-                   Math.abs(color1[2] - color2[2]) <= tolerance &&
-                   color1[3] === color2[3];
-        }
-
-        function hexToRGB(hex) {
-            const r = parseInt(hex.slice(1, 3), 16);
-            const g = parseInt(hex.slice(3, 5), 16);
-            const b = parseInt(hex.slice(5, 7), 16);
-            return [r, g, b, 255];
-        }
-
-        // ======== Geri Alma (Undo) ========
-        function undo() {
-            if (drawings.length > 0 || shapes.length > 0) {
-                if (drawings.length > 0) {
-                    drawings.pop(); // Son çizimi kaldır
-                } else if (shapes.length > 0) {
-                    shapes.pop(); // Son şekli kaldır
-                }
-                redrawCanvas();
-            }
-        }
-        undoBtn.addEventListener('click', undo);
-
-        // ======== Temizle, Kaydet, Dosya Yükle ========
-        clearBtn.addEventListener('click', () => {
-            drawings = [];
-            shapes = [];
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            hasBackgroundImage = false;
-            currentImageIndex = -1;
-        });
-
-        saveBtn.addEventListener('click', () => {
-            const link = document.createElement('a');
-            link.download = 'gizemin_boyama.png';
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-        });
-
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const img = new Image();
-                img.onload = () => {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    drawings = [];
-                    shapes = [];
-                    hasBackgroundImage = true;
-                    currentImageIndex = -1;
-                };
-                img.src = URL.createObjectURL(file);
-            }
-        });
-
-        // ======== Resim yükleme (yalnızca ihtiyaç duyulduğunda yükleme) ========
-        function loadImage(src, redraw = true) {
-            const img = new Image();
-            img.crossOrigin = 'Anonymous';
-            img.onload = () => {
-                if (redraw) {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                }
-                const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
-                const newWidth = img.width * scale;
-                const newHeight = img.height * scale;
-                const offsetX = (canvas.width - newWidth) / 2;
-                const offsetY = (canvas.height - newHeight) / 2;
-                ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
-                hasBackgroundImage = true;
-                if (redraw) redrawCanvas();
+            const hexToRgb = (hex) => {
+                const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : null;
             };
-            img.onerror = () => console.error('Görsel yüklenemedi:', src);
-            img.src = src;
+
+            const fillRgb = hexToRgb(fillColor);
+            if (!fillRgb) return;
+            if (startR === fillRgb.r && startG === fillRgb.g && startB === fillRgb.b) return;
+
+            const pixelStack = [[startX, startY]];
+            while (pixelStack.length) {
+                const newPos = pixelStack.pop();
+                let x = newPos[0];
+                let y = newPos[1];
+                let pixelPos = (y * tempCanvas.width + x) * 4;
+                while (y-- >= 0 && matchStartColor(pixelPos)) { pixelPos -= tempCanvas.width * 4; }
+                pixelPos += tempCanvas.width * 4;
+                ++y;
+                let reachLeft = false, reachRight = false;
+                while (y++ < tempCanvas.height - 1 && matchStartColor(pixelPos)) {
+                    colorPixel(pixelPos);
+                    if (x > 0) { if (matchStartColor(pixelPos - 4)) { if (!reachLeft) { pixelStack.push([x - 1, y]); reachLeft = true; } } else if (reachLeft) { reachLeft = false; } }
+                    if (x < tempCanvas.width - 1) { if (matchStartColor(pixelPos + 4)) { if (!reachRight) { pixelStack.push([x + 1, y]); reachRight = true; } } else if (reachRight) { reachRight = false; } }
+                    pixelPos += tempCanvas.width * 4;
+                }
+            }
+            // 3. Adım: Sonucu ana çizim katmanına aktar
+            drawingCtx.putImageData(imageData, 0, 0);
+
+            function matchStartColor(pixelPos) { const r = data[pixelPos]; const g = data[pixelPos + 1]; const b = data[pixelPos + 2]; return (r === startR && g === startG && b === startB); }
+            function colorPixel(pixelPos) { data[pixelPos] = fillRgb.r; data[pixelPos + 1] = fillRgb.g; data[pixelPos + 2] = fillRgb.b; data[pixelPos + 3] = 255; }
         }
 
-        // ======== Resim ve boş canvas değiştirme butonları ========
-        newCanvasBtn.addEventListener('click', () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawings = [];
-            shapes = [];
-            hasBackgroundImage = false;
-            currentImageIndex = -1;
+        objectCanvas.addEventListener('mousedown', (e) => {
+            startX = e.offsetX; startY = e.offsetY; isDown = true;
+            if (currentMode === 'fill') { floodFill(startX, startY, colorPicker.value); return; }
+            if (currentMode === 'select') {
+                resizeHandle = null;
+                if (selectedObject) {
+                    const handles = selectedObject.getHandles();
+                    for(const handle in handles) { if(startX >= handles[handle].x && startX <= handles[handle].x + 8 && startY >= handles[handle].y && startY <= handles[handle].y + 8) { resizeHandle = handle; break; } }
+                }
+                if (!resizeHandle) {
+                     selectedObject = null;
+                     for (let i = canvasObjects.length - 1; i >= 0; i--) { if (canvasObjects[i].isPointInside(startX, startY)) { selectedObject = canvasObjects[i]; break; } }
+                }
+            } else if (currentMode !== 'draw' && currentMode !== 'line') {
+                addObject(currentMode, startX - 50, startY - 50);
+            }
+            redrawObjectCanvas();
+        });
+        
+        objectCanvas.addEventListener('mousemove', (e) => {
+            if (!isDown) return;
+            const mouseX = e.offsetX; const mouseY = e.offsetY;
+            if (currentMode === 'select' && selectedObject) {
+                const dx = mouseX - startX; const dy = mouseY - startY;
+                if(resizeHandle) {
+                     if(resizeHandle.includes('r')) selectedObject.w += dx; if(resizeHandle.includes('l')) { selectedObject.w -= dx; selectedObject.x += dx; }
+                     if(resizeHandle.includes('b')) selectedObject.h += dy; if(resizeHandle.includes('t')) { selectedObject.h -= dy; selectedObject.y += dy; }
+                } else {
+                    selectedObject.x += dx; selectedObject.y += dy;
+                }
+                startX = mouseX; startY = mouseY; redrawObjectCanvas();
+            } else if (currentMode === 'draw') {
+                drawingCtx.lineCap = 'round'; drawingCtx.strokeStyle = colorPicker.value; drawingCtx.lineWidth = brushSize.value; drawingCtx.beginPath();
+                drawingCtx.moveTo(startX, startY); drawingCtx.lineTo(mouseX, mouseY); drawingCtx.stroke();
+                startX = mouseX; startY = mouseY;
+            } else if (currentMode === 'line') {
+                tempLine = new Line(startX, startY, mouseX, mouseY, colorPicker.value, brushSize.value);
+                redrawObjectCanvas();
+            }
         });
 
-        prevImageBtn.addEventListener('click', () => {
-            if (images.length === 0) return;
-            currentImageIndex = (currentImageIndex - 1 + images.length) % images.length;
-            loadImage(images[currentImageIndex]);
+        objectCanvas.addEventListener('mouseup', (e) => {
+            if (currentMode === 'line' && isDown) {
+                const finalLine = new Line(startX, startY, e.offsetX, e.offsetY, colorPicker.value, brushSize.value);
+                finalLine.draw(drawingCtx); tempLine = null;
+            }
+            isDown = false;
+            redrawObjectCanvas();
         });
-        nextImageBtn.addEventListener('click', () => {
-            if (images.length === 0) return;
-            currentImageIndex = (currentImageIndex + 1) % images.length;
-            loadImage(images[currentImageIndex]);
-        });
-        randomImageBtn.addEventListener('click', () => {
-            if (images.length === 0) return;
-            currentImageIndex = Math.floor(Math.random() * images.length);
-            loadImage(images[currentImageIndex]);
-        });
-
-        // ======== İlk olarak boş sayfa yükle ========
-        if (currentImageIndex === -1) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            hasBackgroundImage = false;
-        }
+        
+        window.addEventListener('resize', setCanvasSize);
+        setCanvasSize();
+        updateActiveToolButton();
+        fillToolButton.style.color = colorPicker.value;
     </script>
 </body>
 </html>
