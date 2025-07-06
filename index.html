@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Gizem'in Mobil Atölyesi 🎨 v7.0</title>
+    <title>Gizem'in Akıcı Çizim Atölyesi 🎨 v7.1</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&display=swap" rel="stylesheet">
@@ -17,33 +17,16 @@
         }
         h1 { text-align: center; margin: 15px 0; }
         .main-container {
-            display: flex;
-            gap: 20px;
-            width: 100%;
-            height: 100%;
-            padding: 0 20px 20px 20px;
-            box-sizing: border-box;
-            flex-grow: 1;
+            display: flex; gap: 20px; width: 100%; height: 100%;
+            padding: 0 20px 20px 20px; box-sizing: border-box; flex-grow: 1;
         }
-        #canvas-container {
-            position: relative;
-            flex-grow: 1; /* Büyüyebilen alan */
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-            border-radius: 15px;
-        }
-        canvas {
-            position: absolute; top: 0; left: 0;
-            width: 100%; height: 100%;
-            border-radius: 15px;
-        }
+        #canvas-container { position: relative; flex-grow: 1; box-shadow: 0 8px 25px rgba(0,0,0,0.1); border-radius: 15px; }
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 15px; }
         #object-canvas { z-index: 10; }
         #drawing-canvas { z-index: 5; background-color: white; border: 2px solid var(--border-color); }
-
         .toolbar {
-            display: flex; flex-direction: column; gap: 10px;
-            background: var(--toolbar-bg); padding: 15px; border-radius: 15px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-            flex-shrink: 0; /* Küçülmesini engelle */
+            display: flex; flex-direction: column; gap: 10px; background: var(--toolbar-bg);
+            padding: 15px; border-radius: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.1); flex-shrink: 0;
         }
         .toolbar-section { border-top: 1px solid #eee; padding-top: 10px; margin-top: 5px; }
         .toolbar-section h4 { margin: 0 0 10px 0; text-align: center; color: #555; }
@@ -58,51 +41,27 @@
         .color-picker-wrapper { padding: 5px; border: 2px solid #ddd; border-radius: 10px; }
         #delete-button { background-color:#e74c3c; color:white; }
 
-        /* YENİ: DUYARLI TASARIM (RESPONSIVE DESIGN) MEDYA SORGUSU */
         @media (max-width: 768px) {
             body { padding: 0; }
             h1 { font-size: 1.5em; margin: 10px 0; }
-            .main-container {
-                flex-direction: column; /* Ana yerleşimi dikeye çevir */
-                padding: 10px;
-                gap: 10px;
-            }
-            .toolbar {
-                order: 2; /* Araç çubuğunu alta al */
-                width: 100%;
-                box-sizing: border-box;
-                padding: 10px;
-                flex-direction: row; /* Araç çubuğu içindekileri yatay yap */
-                overflow-x: auto; /* Yatayda taşarsa kaydır */
-                justify-content: flex-start;
-            }
-            .toolbar-section {
-                border-top: none;
-                border-left: 1px solid #eee;
-                padding: 0 10px;
-                margin: 0;
-            }
+            .main-container { flex-direction: column; padding: 10px; gap: 10px; }
+            .toolbar { order: 2; width: 100%; box-sizing: border-box; padding: 10px; flex-direction: row; overflow-x: auto; justify-content: flex-start; }
+            .toolbar-section { border-top: none; border-left: 1px solid #eee; padding: 0 10px; margin: 0; }
             .toolbar-section:first-child { border-left: none; padding-left: 0;}
-            #canvas-container {
-                order: 1; /* Tuvali üste al */
-                width: 100%;
-                height: 100%;
-            }
+            #canvas-container { order: 1; width: 100%; height: 100%; }
         }
     </style>
 </head>
 <body>
-    <h1>Gizem'in Mobil Atölyesi 🎨</h1>
+    <h1>Gizem'in Akıcı Çizim Atölyesi 🎨</h1>
     <div class="main-container">
         <div class="toolbar">
-            <div class="toolbar-section">
-                <h4>Araçlar</h4>
-                <div class="tool-grid">
-                    <button class="tool-button active" data-tool="select" title="Seç">✋</button>
-                    <button class="tool-button" data-tool="draw" title="Çizim">✏️</button>
-                    <button class="tool-button" data-tool="line" title="Çizgi">📏</button>
-                    <button class="tool-button" data-tool="fill" id="fill-tool-button" title="Boya">🎨</button>
-                </div>
+             <h4>Araçlar</h4>
+            <div class="tool-grid">
+                <button class="tool-button active" data-tool="select" title="Seç">✋</button>
+                <button class="tool-button" data-tool="draw" title="Çizim">✏️</button>
+                <button class="tool-button" data-tool="line" title="Çizgi">📏</button>
+                <button class="tool-button" data-tool="fill" id="fill-tool-button" title="Boya">🎨</button>
             </div>
             <div class="toolbar-section">
                 <h4>Şekiller</h4>
@@ -141,8 +100,6 @@
     </div>
 
     <script>
-    // --- JAVASCRIPT KODU ÖNCEKİ SÜRÜM (v6.4) İLE BÜYÜK ÖLÇÜDE AYNIDIR ---
-    // Sadece canvas boyutlandırma fonksiyonu güncellenmiştir.
     const SVG_ICONS = {
         house: `data:image/svg+xml;base64,${btoa('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50 10 L10 50 H20 V90 H80 V50 H90 Z M30 80 V60 H70 V80 Z" stroke="black" fill="#f5a623" stroke-width="2"/></svg>')}`,
         tree: `data:image/svg+xml;base64,${btoa('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="45" y="60" width="10" height="30" fill="#8b5a2b"/><circle cx="50" cy="40" r="30" fill="#4caf50"/></svg>')}`,
@@ -170,17 +127,12 @@
     let tempLine = null;
 
     function setCanvasSize() {
-        // YENİ: Canvas boyutunu konteynerine göre ayarla
         const rect = canvasContainer.getBoundingClientRect();
         drawingCanvas.width = objectCanvas.width = rect.width;
         drawingCanvas.height = objectCanvas.height = rect.height;
         redrawObjectCanvas();
-        // Eğer daha önce çizim yapıldıysa, yeniden boyutlandırmada kaybolmaması için
-        // canvasObjects'teki nesneleri yeniden çizmemiz gerekebilir, ancak bu daha karmaşık bir mantık gerektirir.
-        // Şimdilik temiz bir başlangıç yapıyoruz.
     }
     
-    // ...[Geri kalan tüm Javascript fonksiyonları (redrawObjectCanvas, CanvasObject sınıfları, addObject, floodFill vb.) önceki kod ile aynıdır]
     function redrawObjectCanvas() { objectCtx.clearRect(0, 0, objectCanvas.width, objectCanvas.height); canvasObjects.forEach(obj => obj.draw(objectCtx)); if (selectedObject) selectedObject.drawSelection(objectCtx); if(tempLine) tempLine.draw(objectCtx); }
     class CanvasObject { constructor(x, y, w, h, color, strokeWidth) { this.x = x; this.y = y; this.w = w; this.h = h; this.color = color; this.strokeWidth = strokeWidth; } drawSelection(ctx) { ctx.strokeStyle = '#6c63ff'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); ctx.strokeRect(this.x, this.y, this.w, this.h); ctx.setLineDash([]); const handles = this.getHandles(); for (const handle in handles) { ctx.fillStyle = 'white'; ctx.strokeStyle = '#6c63ff'; ctx.fillRect(handles[handle].x, handles[handle].y, 8, 8); ctx.strokeRect(handles[handle].x, handles[handle].y, 8, 8); } } getHandles() { return { tl: { x: this.x - 4, y: this.y - 4 }, tr: { x: this.x + this.w - 4, y: this.y - 4 }, bl: { x: this.x - 4, y: this.y + this.h - 4 }, br: { x: this.x + this.w - 4, y: this.y + this.h - 4 } }; } isPointInside(px, py) { return px >= this.x && px <= this.x + this.w && py >= this.y && py <= this.y + this.h; } }
     class Rect extends CanvasObject { draw(ctx) { ctx.strokeStyle = this.color; ctx.lineWidth = this.strokeWidth; ctx.strokeRect(this.x, this.y, this.w, this.h); } }
@@ -195,10 +147,102 @@
     document.getElementById('clear-button').addEventListener('click', () => { if (confirm("Tüm çizimleri ve nesneleri silmek istediğinizden emin misiniz?")) { canvasObjects = []; selectedObject = null; drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height); redrawObjectCanvas(); } });
     colorPicker.addEventListener('input', (e) => { fillToolButton.style.color = e.target.value; });
     function floodFill(startX, startY, fillColor) { const tempCanvas = document.createElement('canvas'); const tempCtx = tempCanvas.getContext('2d'); tempCanvas.width = drawingCanvas.width; tempCanvas.height = drawingCanvas.height; tempCtx.drawImage(drawingCanvas, 0, 0); tempCtx.drawImage(objectCanvas, 0, 0); const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height); const data = imageData.data; const startPos = (startY * tempCanvas.width + startX) * 4; const startR = data[startPos], startG = data[startPos + 1], startB = data[startPos + 2]; const hexToRgb = (hex) => { const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex); return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : null; }; const fillRgb = hexToRgb(fillColor); if (!fillRgb || (startR === fillRgb.r && startG === fillRgb.g && startB === fillRgb.b)) return; const pixelStack = [[startX, startY]]; while (pixelStack.length) { const newPos = pixelStack.pop(); let x = newPos[0], y = newPos[1]; let pixelPos = (y * tempCanvas.width + x) * 4; while (y-- >= 0 && matchStartColor(pixelPos)) { pixelPos -= tempCanvas.width * 4; } pixelPos += tempCanvas.width * 4; ++y; let reachLeft = false, reachRight = false; while (y++ < tempCanvas.height - 1 && matchStartColor(pixelPos)) { colorPixel(pixelPos); if (x > 0) { if (matchStartColor(pixelPos - 4)) { if (!reachLeft) { pixelStack.push([x - 1, y]); reachLeft = true; } } else if (reachLeft) { reachLeft = false; } } if (x < tempCanvas.width - 1) { if (matchStartColor(pixelPos + 4)) { if (!reachRight) { pixelStack.push([x + 1, y]); reachRight = true; } } else if (reachRight) { reachRight = false; } } pixelPos += tempCanvas.width * 4; } } drawingCtx.putImageData(imageData, 0, 0); function matchStartColor(pixelPos) { const r = data[pixelPos], g = data[pixelPos+1], b = data[pixelPos+2]; return (r === startR && g === startG && b === startB); } function colorPixel(pixelPos) { data[pixelPos] = fillRgb.r; data[pixelPos+1] = fillRgb.g; data[pixelPos+2] = fillRgb.b; data[pixelPos+3] = 255; } }
-    objectCanvas.addEventListener('mousedown', (e) => { startX = e.offsetX; startY = e.offsetY; isDown = true; if (currentMode === 'fill') { floodFill(startX, startY, colorPicker.value); return; } if (currentMode === 'select') { resizeHandle = null; if (selectedObject) { const handles = selectedObject.getHandles(); for(const handle in handles) { if(startX >= handles[handle].x && startX <= handles[handle].x + 8 && startY >= handles[handle].y && startY <= handles[handle].y + 8) { resizeHandle = handle; break; } } } if (!resizeHandle) { selectedObject = null; for (let i = canvasObjects.length - 1; i >= 0; i--) { if (canvasObjects[i].isPointInside(startX, startY)) { selectedObject = canvasObjects[i]; break; } } } } else if (currentMode !== 'draw' && currentMode !== 'line') { addObject(currentMode, startX - 50, startY - 50); } redrawObjectCanvas(); });
-    objectCanvas.addEventListener('mousemove', (e) => { if (!isDown) return; const mouseX = e.offsetX, mouseY = e.offsetY; if (currentMode === 'select' && selectedObject) { const dx = mouseX - startX, dy = mouseY - startY; if(resizeHandle) { if(resizeHandle.includes('r')) selectedObject.w += dx; if(resizeHandle.includes('l')) { selectedObject.w -= dx; selectedObject.x += dx; } if(resizeHandle.includes('b')) selectedObject.h += dy; if(resizeHandle.includes('t')) { selectedObject.h -= dy; selectedObject.y += dy; } } else { selectedObject.x += dx; selectedObject.y += dy; } startX = mouseX; startY = mouseY; redrawObjectCanvas(); } else if (currentMode === 'draw') { drawingCtx.lineCap = 'round'; drawingCtx.strokeStyle = colorPicker.value; drawingCtx.lineWidth = brushSize.value; drawingCtx.beginPath(); drawingCtx.moveTo(startX, startY); drawingCtx.lineTo(mouseX, mouseY); drawingCtx.stroke(); startX = mouseX; startY = mouseY; } else if (currentMode === 'line') { tempLine = new Line(startX, startY, mouseX, mouseY, colorPicker.value, brushSize.value); redrawObjectCanvas(); } });
-    objectCanvas.addEventListener('mouseup', (e) => { if (currentMode === 'line' && isDown) { const finalLine = new Line(startX, startY, e.offsetX, e.offsetY, colorPicker.value, brushSize.value); finalLine.draw(drawingCtx); tempLine = null; } isDown = false; redrawObjectCanvas(); });
     
+    // YENİ: Hem fare hem de dokunmatik için koordinat alan evrensel fonksiyon
+    function getCoordinates(e) {
+        const rect = objectCanvas.getBoundingClientRect();
+        if (e.touches && e.touches.length > 0) {
+            return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+        }
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+
+    function handleStart(e) {
+        const coords = getCoordinates(e);
+        startX = coords.x;
+        startY = coords.y;
+        isDown = true;
+
+        if (currentMode === 'draw') {
+            // DÜZELTME: beginPath() çizim başladığında çağrılır.
+            drawingCtx.beginPath();
+            drawingCtx.moveTo(startX, startY);
+        } else if (currentMode === 'fill') {
+            floodFill(startX, startY, colorPicker.value);
+            isDown = false; // Boyama tek tıklamadır
+        } else if (currentMode === 'select') {
+            resizeHandle = null;
+            if (selectedObject) {
+                const handles = selectedObject.getHandles();
+                for(const handle in handles) { if(startX >= handles[handle].x && startX <= handles[handle].x + 8 && startY >= handles[handle].y && startY <= handles[handle].y + 8) { resizeHandle = handle; break; } }
+            }
+            if (!resizeHandle) {
+                 selectedObject = null;
+                 for (let i = canvasObjects.length - 1; i >= 0; i--) { if (canvasObjects[i].isPointInside(startX, startY)) { selectedObject = canvasObjects[i]; break; } }
+            }
+        } else if (currentMode !== 'line') {
+            addObject(currentMode, startX - 50, startY - 50);
+        }
+        redrawObjectCanvas();
+    }
+
+    function handleMove(e) {
+        if (!isDown) return;
+        // YENİ: Dokunmatik ekranda çizim yaparken sayfanın kaymasını engelle
+        e.preventDefault();
+
+        const coords = getCoordinates(e);
+        const mouseX = coords.x;
+        const mouseY = coords.y;
+
+        if (currentMode === 'select' && selectedObject) {
+            const dx = mouseX - startX; const dy = mouseY - startY;
+            if(resizeHandle) {
+                 if(resizeHandle.includes('r')) selectedObject.w += dx; if(resizeHandle.includes('l')) { selectedObject.w -= dx; selectedObject.x += dx; }
+                 if(resizeHandle.includes('b')) selectedObject.h += dy; if(resizeHandle.includes('t')) { selectedObject.h -= dy; selectedObject.y += dy; }
+            } else {
+                selectedObject.x += dx; selectedObject.y += dy;
+            }
+            startX = mouseX; startY = mouseY; redrawObjectCanvas();
+        } else if (currentMode === 'draw') {
+            // DÜZELTME: Sadece çizgi çizilir, her seferinde yola yeniden başlanmaz.
+            drawingCtx.lineCap = 'round'; drawingCtx.strokeStyle = colorPicker.value;
+            drawingCtx.lineWidth = brushSize.value;
+            drawingCtx.lineTo(mouseX, mouseY);
+            drawingCtx.stroke();
+            drawingCtx.beginPath(); // Bir sonraki segment için yolu hazırla
+            drawingCtx.moveTo(mouseX, mouseY);
+        } else if (currentMode === 'line') {
+            tempLine = new Line(startX, startY, mouseX, mouseY, colorPicker.value, brushSize.value);
+            redrawObjectCanvas();
+        }
+    }
+
+    function handleEnd(e) {
+        if (!isDown) return;
+        isDown = false;
+        
+        if (currentMode === 'line') {
+            const coords = getCoordinates(e.changedTouches ? e.changedTouches[0] : e);
+            const finalLine = new Line(startX, startY, coords.x, coords.y, colorPicker.value, brushSize.value);
+            finalLine.draw(drawingCtx);
+            tempLine = null;
+        } else if (currentMode === 'draw') {
+            drawingCtx.beginPath(); // Kalemi kaldırınca yolu bitir.
+        }
+        redrawObjectCanvas();
+    }
+
+    // Fare olayları
+    objectCanvas.addEventListener('mousedown', handleStart);
+    objectCanvas.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleEnd); // Pencerenin herhangi bir yerinde bırakırsa yakala
+
+    // YENİ: Dokunmatik olayları
+    objectCanvas.addEventListener('touchstart', handleStart, { passive: false });
+    objectCanvas.addEventListener('touchmove', handleMove, { passive: false });
+    window.addEventListener('touchend', handleEnd);
+
     window.addEventListener('resize', setCanvasSize);
     setCanvasSize();
     updateActiveToolButton();
